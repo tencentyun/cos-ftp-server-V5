@@ -2681,8 +2681,6 @@ class FTPHandler(AsyncChat):
         """Remove the specified directory.
         On success return the directory path, else None.
         """
-        print "ftp_RMD root:", self.fs.root
-        print "ftp_RMD path:", path
         if self.fs.realpath(path) == self.fs.realpath(self.fs.root):
             msg = "Can't remove root directory."
             self.respond("550 %s" % msg)
