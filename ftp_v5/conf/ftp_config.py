@@ -3,7 +3,11 @@
 import os
 import ConfigParser
 import platform
+import logging
 import ftp_v5.conf.common_config
+
+logger = logging.getLogger(__name__)
+
 
 class CosFtpConfig:
 
@@ -14,6 +18,20 @@ class CosFtpConfig:
     else:
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
                                       "/conf/vsftpd.conf"
+
+    @classmethod
+    def _check_ipv4(cls, ipv4):
+        if len(ipv4.split(".")) != 4:
+            return False
+        for value in ipv4.split("."):
+            try:
+                value = int(value)
+                if value < 0 or value > 255:
+                    return False
+            except ValueError:
+                return False
+
+        return True
 
     def __init__(self):
         cfg = ConfigParser.RawConfigParser()
@@ -34,14 +52,19 @@ class CosFtpConfig:
             login_user = element.split(":")
             self.login_users.append(tuple(login_user))
 
+        self.passive_address = None
         if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "passive_address") and str(cfg.get("NETWORK", "passive_address")) != "":
-            self.passive_address = cfg.get("NETWORK", "passive_address")
+            if CosFtpConfig._check_ipv4(cfg.get("NETWORK", "passive_address")):
+                self.passive_address = cfg.get("NETWORK", "passive_address")
+                logger.info("Passive_address: %s" % self.passive_address)
+            else:
+                logger.error("passive_address:%s is invalid! Please consider this format: 0.0.0.0" % str(cfg.get("NETWORK", "passive_address")))
         else:
             self.passive_address = None
 
         self.listen_port = cfg.get("NETWORK", "listen_port")
 
-        if cfg.has_section("FILE_OPTION") and cfg.has_option("FILE_OPTION","single_file_max_size"):
+        if cfg.has_section("FILE_OPTION") and cfg.has_option("FILE_OPTION", "single_file_max_size"):
             self.single_file_max_size = int(cfg.get("FILE_OPTION", "single_file_max_size"))
         else:
             self.single_file_max_size = 200 * ftp_v5.conf.common_config.GIGABYTE                            # 默认单文件最大为200G
