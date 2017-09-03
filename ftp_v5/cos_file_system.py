@@ -1,9 +1,9 @@
 # -*- coding:utf-8 -*-
 
 from pyftpdlib.filesystems import AbstractedFS, FilesystemError
-from stream_uploader import StreamUploader
+from ftp_v5.stream_uploader import StreamUploader
 from os import path
-from utils import reformat_lm
+from ftp_v5.utils import reformat_lm
 from qcloud_cos.cos_exception import CosException
 from qcloud_cos.cos_client import CosS3Client
 from qcloud_cos.cos_client import CosConfig
@@ -299,11 +299,8 @@ class CosFileSystem(AbstractedFS):
         if self.isdir(path):
             dir_name = self.fs2ftp(path).strip("/") + "/"
             logger.debug("dir_name:".format(str(dir_name).encode("utf-8")))
-            print dir_name
             response = self._cos_client.delete_object(Bucket=self._bucket_name, Key=dir_name)
             logger.debug("response:".format(str(response).encode("utf-8")))
-            print response
-
 
     def remove(self, path):
         logger.info("user invoke remove for {0}".format(str(path).encode("utf-8")))
@@ -312,10 +309,8 @@ class CosFileSystem(AbstractedFS):
 
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")
-            print key_name
             logger.debug("key_name: {0}".format(str(key_name).encode("utf-8")))
             response = self._cos_client.delete_object(Bucket=self._bucket_name, Key=key_name)
-            print response
             logger.debug("response: {0}".format(str(response).encode("utf-8")))
 
     def lexists(self, path):
@@ -362,9 +357,5 @@ def test():
                                        Access_key=CosFtpConfig().secretkey,
                                        Region=CosFtpConfig().region
                                        ))
-
-    print cos_client.list_objects(Bucket="iainyu",
-                                  Prefix='ftptest',
-                                  Delimiter="/")
 if __name__ == "__main__":
     test()
