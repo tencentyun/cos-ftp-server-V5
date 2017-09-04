@@ -82,6 +82,10 @@ def xml_to_dict(data):
     """V5使用xml格式，将response中的xml转换为dict"""
     root = xml.etree.ElementTree.fromstring(data)
     xmldict = Xml2Dict(root)
+    xmlstr = str(xmldict)
+    xmlstr = xmlstr.replace("{http://www.qcloud.com/document/product/436/7751}", "")
+    xmlstr = xmlstr.replace("{http://www.w3.org/2001/XMLSchema-instance}", "")
+    xmldict = eval(xmlstr)
     return xmldict
 
 
@@ -107,11 +111,12 @@ def mapped(headers):
 
 class CosConfig(object):
     """config类，保存用户相关信息"""
-    def __init__(self, Appid, Region, Access_id, Access_key):
+    def __init__(self, Appid, Region, Access_id, Access_key, Token=None):
         self._appid = Appid
         self._region = Region
         self._access_id = Access_id
         self._access_key = Access_key
+        self._token = Token
         logger.info("config parameter-> appid: {appid}, region: {region}".format(
                  appid=Appid,
                  region=Region))
@@ -146,16 +151,17 @@ class CosS3Client(object):
         else:
             self._session = session
 
-    def get_auth(self, Method, Bucket, Key=None, **kwargs):
+    def get_auth(self, Method, Bucket, Key=None, Expired=300, headers={}, params={}):
         """获取签名"""
-        headers = mapped(kwargs)
-        # TODO(tiedu)  检查header的参数合法性
         url = self._conf.uri(bucket=Bucket, path=Key)
-        r = Request(Method, url)
-        auth = CosS3Auth(self._conf._access_id, self._conf._access_key)
+        r = Request(Method, url, headers=headers, params=params)
+        auth = CosS3Auth(self._conf._access_id, self._conf._access_key, Expired)
         return auth(r).headers['Authorization']
 
     def send_request(self, method, url, timeout=30, **kwargs):
+        if self._conf._token is not None:
+            kwargs['headers']['x-cos-security-token'] = self._conf._token
+        kwargs['headers']['User-Agent'] = 'cos-python-sdk-v5'
         try:
             for j in range(self._retry):
                 if method == 'POST':
@@ -174,8 +180,8 @@ class CosS3Client(object):
             logger.exception('url:%s, exception:%s' % (url, str(e)))
             raise CosClientError(str(e))
 
-        if res.status_code >= 300:  # 所有的3XX,4XX,5XX都认为是COSServiceError
-            if method == 'HEAD':   # Head 需要处理
+        if res.status_code >= 400:  # 所有的4XX,5XX都认为是COSServiceError
+            if method == 'HEAD' and res.status_code == 404:   # Head 需要处理
                 info = dict()
                 info['code'] = 'NoSuchResource'
                 info['message'] = 'The Resource You Head Not Exist'
@@ -191,6 +197,7 @@ class CosS3Client(object):
                 logger.error(msg)
                 raise CosServiceError(method, msg, res.status_code)
 
+    #  s3 object interface begin
     def put_object(self, Bucket, Body, Key, **kwargs):
         """单文件上传接口，适用于小文件，最大不得超过5GB"""
         headers = mapped(kwargs)
@@ -235,10 +242,10 @@ class CosS3Client(object):
             response[k] = rt.headers[k]
         return response
 
-    def get_presigned_download_url(self, Bucket, Key):
+    def get_presigned_download_url(self, Bucket, Key, Expired=300):
         """生成预签名的下载url"""
         url = self._conf.uri(bucket=Bucket, path=Key)
-        sign = self.get_auth(Method='GET', Bucket=Bucket, Key=Key)
+        sign = self.get_auth(Method='GET', Bucket=Bucket, Key=Key, Expired=300)
         url = url + '?sign=' + urllib.quote(sign)
         return url
 
@@ -255,6 +262,51 @@ class CosS3Client(object):
                 auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
                 headers=headers)
         return None
+
+    def head_object(self, Bucket, Key, **kwargs):
+        """获取文件信息"""
+        headers = mapped(kwargs)
+        url = self._conf.uri(bucket=Bucket, path=Key)
+        logger.info("head object, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='HEAD',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        return rt.headers
+
+    def gen_copy_source_url(self, CopySource):
+        """拼接拷贝源url"""
+        if 'Bucket' in CopySource.keys():
+            bucket = CopySource['Bucket']
+        else:
+            raise CosClientError('CopySource Need Parameter Bucket')
+        if 'Key' in CopySource.keys():
+            key = CopySource['Key']
+        else:
+            raise CosClientError('CopySource Need Parameter Key')
+        url = self._conf.uri(bucket=bucket, path=key).encode('utf8')
+        url = url[7:]  # copysource不支持http://开头，去除
+        return url
+
+    def copy_object(self, Bucket, Key, CopySource, CopyStatus='Copy', **kwargs):
+        """文件拷贝，文件信息修改"""
+        headers = mapped(kwargs)
+        headers['x-cos-copy-source'] = self.gen_copy_source_url(CopySource)
+        headers['x-cos-metadata-directive'] = CopyStatus
+        url = self._conf.uri(bucket=Bucket, path=Key)
+        logger.info("copy object, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='PUT',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        data = xml_to_dict(rt.text)
+        return data
 
     def create_multipart_upload(self, Bucket, Key, **kwargs):
         """创建分片上传，适用于大文件上传"""
@@ -284,6 +336,7 @@ class CosS3Client(object):
         rt = self.send_request(
                 method='PUT',
                 url=url,
+                headers=headers,
                 auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
                 data=Body)
         response = dict()
@@ -304,11 +357,8 @@ class CosS3Client(object):
                 data=dict_to_xml(MultipartUpload),
                 timeout=1200,  # 分片上传大文件的时间比较长，设置为20min
                 headers=headers)
-        response = dict()
         data = xml_to_dict(rt.text)
-        for key in data.keys():
-            response[key[key.find('}')+1:]] = data[key]
-        return response
+        return data
 
     def abort_multipart_upload(self, Bucket, Key, UploadId, **kwargs):
         """放弃一个已经存在的分片上传任务，删除所有已经存在的分片"""
@@ -336,19 +386,47 @@ class CosS3Client(object):
                 url=url,
                 auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
                 headers=headers)
-
         data = xml_to_dict(rt.text)
-        if 'Part' in data.keys():
-            if isinstance(data['Part'], list):
-                return data
-            else:  # 只有一个part，将dict转为list，保持一致
-                lst = []
-                lst.append(data['Part'])
-                data['Part'] = lst
-                return data
-        else:
-            return data
+        if 'Part' in data.keys() and isinstance(data['Part'], dict):  # 只有一个part，将dict转为list，保持一致
+            lst = []
+            lst.append(data['Part'])
+            data['Part'] = lst
+        return data
 
+    def put_object_acl(self, Bucket, Key, **kwargs):
+        """设置object ACL"""
+        headers = mapped(kwargs)
+        url = self._conf.uri(bucket=Bucket, path=Key+"?acl")
+        logger.info("put object acl, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='PUT',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        return None
+
+    def get_object_acl(self, Bucket, Key, **kwargs):
+        """获取object ACL"""
+        headers = mapped(kwargs)
+        url = self._conf.uri(bucket=Bucket, path=Key+"?acl")
+        logger.info("get object acl, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='GET',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        data = xml_to_dict(rt.text)
+        if data['AccessControlList'] is not None and isinstance(data['AccessControlList']['Grant'], dict):
+            lst = []
+            lst.append(data['AccessControlList']['Grant'])
+            data['AccessControlList']['Grant'] = lst
+        return data
+
+    # s3 bucket interface begin
     def create_bucket(self, Bucket, **kwargs):
         """创建一个bucket"""
         headers = mapped(kwargs)
@@ -397,71 +475,75 @@ class CosS3Client(object):
                 auth=CosS3Auth(self._conf._access_id, self._conf._access_key))
 
         data = xml_to_dict(rt.text)
-        if 'Contents' in data.keys():
-            if isinstance(data['Contents'], list):
-                return data
-            else:  # 只有一个Contents，将dict转为list，保持一致
+        if 'Contents' in data.keys() and isinstance(data['Contents'], dict):  # 只有一个Contents，将dict转为list，保持一致
                 lst = []
                 lst.append(data['Contents'])
                 data['Contents'] = lst
-                return data
-        else:
-            return data
-
-    def head_object(self, Bucket, Key, **kwargs):
-        """获取文件信息"""
-        headers = mapped(kwargs)
-        url = self._conf.uri(bucket=Bucket, path=Key)
-        logger.info("head object, url=:{url} ,headers=:{headers}".format(
-            url=url,
-            headers=headers))
-        rt = self.send_request(
-                method='HEAD',
-                url=url,
-                auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
-                headers=headers)
-        return rt.headers
-
-    def gen_copy_source_url(self, CopySource):
-        """拼接拷贝源url"""
-        if 'Bucket' in CopySource.keys():
-            bucket = CopySource['Bucket']
-        else:
-            raise CosClientError('CopySource Need Parameter Bucket')
-        if 'Key' in CopySource.keys():
-            key = CopySource['Key']
-        else:
-            raise CosClientError('CopySource Need Parameter Key')
-        url = self._conf.uri(bucket=bucket, path=key).encode('utf8')
-        url = url[7:]  # copysource不支持http://开头，去除
-        return url
-
-    def copy_object(self, Bucket, Key, CopySource, CopyStatus='Copy', **kwargs):
-        """文件拷贝，文件信息修改"""
-        headers = mapped(kwargs)
-        headers['x-cos-copy-source'] = self.gen_copy_source_url(CopySource)
-        headers['x-cos-metadata-directive'] = CopyStatus
-        url = self._conf.uri(bucket=Bucket, path=Key)
-        logger.info("copy object, url=:{url} ,headers=:{headers}".format(
-            url=url,
-            headers=headers))
-        rt = self.send_request(
-                method='PUT',
-                url=url,
-                auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
-                headers=headers)
-        data = xml_to_dict(rt.text)
         return data
 
-    def list_buckets(self):
+    def head_bucket(self, Bucket, **kwargs):
+        """获取bucket信息"""
+        headers = mapped(kwargs)
+        url = self._conf.uri(bucket=Bucket)
+        logger.info("head bucket, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='HEAD',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        return None
+
+    def put_bucket_acl(self, Bucket, **kwargs):
+        """设置bucket ACL"""
+        headers = mapped(kwargs)
+        url = self._conf.uri(bucket=Bucket, path="?acl")
+        logger.info("put bucket acl, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='PUT',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        return None
+
+    def get_bucket_acl(self, Bucket, **kwargs):
+        """获取bucket ACL"""
+        headers = mapped(kwargs)
+        url = self._conf.uri(bucket=Bucket, path="?acl")
+        logger.info("get bucket acl, url=:{url} ,headers=:{headers}".format(
+            url=url,
+            headers=headers))
+        rt = self.send_request(
+            method='GET',
+            url=url,
+            auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
+            headers=headers)
+        data = xml_to_dict(rt.text)
+        if data['AccessControlList'] is not None and isinstance(data['AccessControlList']['Grant'], dict):
+            lst = []
+            lst.append(data['AccessControlList']['Grant'])
+            data['AccessControlList']['Grant'] = lst
+        return data
+
+    # service interface begin
+    def list_buckets(self, **kwargs):
         """列出所有bucket"""
+        headers = mapped(kwargs)
         url = 'http://service.cos.myqcloud.com/'
         rt = self.send_request(
                 method='GET',
                 url=url,
+                headers=headers,
                 auth=CosS3Auth(self._conf._access_id, self._conf._access_key),
                 )
         data = xml_to_dict(rt.text)
+        if data['Buckets'] is not None and isinstance(data['Buckets']['Bucket'], dict):
+            lst = []
+            lst.append(data['Buckets']['Bucket'])
+            data['Buckets']['Bucket'] = lst
         return data
 
 if __name__ == "__main__":
