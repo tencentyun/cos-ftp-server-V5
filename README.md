@@ -66,7 +66,7 @@ cos_user_home_dir = /home/test/cosftp_data	#ftp server的工作目录
 login_users = user1:pass1:RW;user2:pass2:RW 这里配置ftp登录用户名、密码和相关的权限（格式为用户名：密码：读写权限，多个账户用分号分割）
 
 [NETWORK]
-passive_address = xxx.xxx.xxx.xxx	# 外网IP设置，用户如需要通过外网IP访问FTP服务器，则需要设置该项。 如客户机和FTP服务器均在腾讯云CVM机器上，通过内网IP访问，则不需要设置
+passive_address = xxx.xxx.xxx.xxx	# 针对多网卡的用户（既有内网IP，又有外网IP），建议这里明确指定一个固定的IP地址。
 listen_port = 2121		# FTP SERVER的监听端口，默认为2121
 
 ```
