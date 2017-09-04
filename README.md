@@ -54,13 +54,12 @@ conf/vsftpd.conf为FTP SERVER的配置文件，相关配置说明如下
 ``` conf
 
 [COS_ACCOUNT]
-cos_appid = xxxxx		# 用户自己appid
-cos_secretid= xxxx	    #
-cos_secretkey = xxxx    # secretid对应的secretkey
-cos_bucket = xxxxx		# 要操作的bucket的名字， Note：V5控制台上的bucket名字采用了bucketname-appid的命名，这里的只填写bucket_name
-cos_region = gz			# bucket所在的区域，目前有效值为华南广州（gz），华东上海（sh），华北天津（tj）
-cos_download_domain = cos
-cos_user_home_dir = /home/test/cosftp_data	#ftp server的工作目录
+cos_appid = xxxxx		    # 用户自己appid
+cos_secretid= xxxx	    # secreteid和secretekey可在以下地址获取：https://console.qcloud.com/capi
+cos_secretkey = xxxx    # secretid对应的secretkey
+cos_bucket = xxxxx		  # 要操作的bucket的名字， Note：V5控制台上的bucket名字采用了bucketname-appid的命名，这里的只填写bucket_name
+cos_region = ap-beijing # bucket所在的区域，目前支持bucket区域的简称请参照官方文档（XML API部分）：https://www.qcloud.com/document/product/436/6224
+cos_user_home_dir = /home/cosftp/cosftp_data	#ftp server的工作目录
 
 [FTP_ACCOUNT]
 login_users = user1:pass1:RW;user2:pass2:RW 这里配置ftp登录用户名、密码和相关的权限（格式为用户名：密码：读写权限，多个账户用分号分割）
