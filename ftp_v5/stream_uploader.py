@@ -89,10 +89,15 @@ class StreamUploader(object):
         logger.info("Closing the stream upload...")
 
         if self._buffer_len != 0:
-            logger.info("Simple upload")                            # 最后一个分片，采用单文件上传
-            self._cos_client.put_object(Bucket=self._bucket_name,
-                                        Body=self._buffer.read(self._buffer_len),
-                                        Key=self._key_name)
+            if not self._has_init:
+                # 采用简单文件上传
+                logger.info("Simple file upload!")
+                self._cos_client.put_object(Bucket=self._bucket_name,
+                                            Body=self._buffer.read(self._buffer_len),
+                                            Key=self._key_name)
+            else:
+                self._multipart_uploader.upload_part(StringIO(self._buffer.read(self._min_part_size)), self._part_num)
+
         if self._has_init:
             self._thread_pool.close()
             self._thread_pool.join()
