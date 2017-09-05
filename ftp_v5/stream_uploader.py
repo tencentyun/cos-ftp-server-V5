@@ -47,7 +47,7 @@ class StreamUploader(object):
         if CosFtpConfig().single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
             raise ValueError("File size: %d is too big" % CosFtpConfig().single_file_max_size)
 
-        self._min_part_size = int(math.ceil(CosFtpConfig().single_file_max_size / MultipartUpload.MaxiumPartNum / ftp_v5.conf.common_config.MEGABYTE) * ftp_v5.conf.common_config.MEGABYTE);
+        self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
 
         if CosFtpConfig().single_file_max_size < StreamUploader.MIN_PART_SIZE:
             self._min_part_size = CosFtpConfig().single_file_max_size
