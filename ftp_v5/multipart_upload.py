@@ -31,6 +31,7 @@ class MultipartUpload(object):
         self._multipart_upload['Part'] = list()
 
     def upload_part(self, content, part_num):
+
         dict_response = self._cos_client.upload_part(
             Bucket=self._bucket_name, Key=self._key_name,
             UploadId=self._upload_id, PartNumber=part_num,
@@ -38,7 +39,7 @@ class MultipartUpload(object):
         )
 
         dict_etag = dict()
-        dict_etag['ETag'] = dict_response['ETag']
+        dict_etag['ETag'] = dict_response['ETag'].strip('"')
         dict_etag['PartNumber'] = part_num
 
         self._multipart_upload['Part'].append(dict_etag)
@@ -46,6 +47,10 @@ class MultipartUpload(object):
         return dict_response           # xxx
 
     def complete_upload(self):
+
+        # 首先，对multipart进行排序
+
+        self._multipart_upload['Part'] = sorted(self._multipart_upload['Part'], key=lambda part: part["PartNumber"])
 
         dict_response = self._cos_client.complete_multipart_upload(Bucket=self._bucket_name,
                                                                    Key=self._key_name,
