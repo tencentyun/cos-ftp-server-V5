@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 class StreamUploader(object):
 
-    MIN_PART_SIZE = 20 * ftp_v5.conf.common_config.MEGABYTE
+    MIN_PART_SIZE = 1 * ftp_v5.conf.common_config.MEGABYTE
 
     def __init__(self, cos_client, bucket_name, object_name=None):
         self._cos_client = cos_client
@@ -47,10 +47,10 @@ class StreamUploader(object):
         if CosFtpConfig().single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
             raise ValueError("File size: %d is too big" % CosFtpConfig().single_file_max_size)
 
-        self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
-
         if CosFtpConfig().single_file_max_size < StreamUploader.MIN_PART_SIZE:
-            self._min_part_size = CosFtpConfig().single_file_max_size
+            self._min_part_size = StreamUploader.MIN_PART_SIZE
+        else:
+            self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
 
         logger.info("Min part size: %d" % self._min_part_size)
 
