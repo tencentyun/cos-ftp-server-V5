@@ -56,9 +56,6 @@ class CosFtpConfig:
         if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "passive_address") and str(cfg.get("NETWORK", "passive_address")) != "":
             if CosFtpConfig._check_ipv4(cfg.get("NETWORK", "passive_address")):
                 self.passive_address = cfg.get("NETWORK", "passive_address")
-                logger.info("Passive_address: %s" % self.passive_address)
-            else:
-                logger.error("passive_address:%s is invalid! Please consider this format: 0.0.0.0" % str(cfg.get("NETWORK", "passive_address")))
         else:
             self.passive_address = None
 
