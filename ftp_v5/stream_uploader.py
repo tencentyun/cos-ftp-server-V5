@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 class StreamUploader(object):
 
     MIN_PART_SIZE = 1 * ftp_v5.conf.common_config.MEGABYTE
+    MAX_PART_SIZE = 5 * ftp_v5.conf.common_config.GIGABYTE
 
     def __init__(self, cos_client, bucket_name, object_name=None):
         self._cos_client = cos_client
@@ -47,10 +48,10 @@ class StreamUploader(object):
         if CosFtpConfig().single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
             raise ValueError("File size: %d is too big" % CosFtpConfig().single_file_max_size)
 
-        if CosFtpConfig().single_file_max_size < StreamUploader.MIN_PART_SIZE:
-            self._min_part_size = StreamUploader.MIN_PART_SIZE
-        else:
-            self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
+        self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
+
+        if self._min_part_size < StreamUploader.MIN_PART_SIZE:
+            self._min_part_size = StreamUploader.MIN_PART_SIZE              # part size 最小限制为1MB
 
         logger.info("Min part size: %d" % self._min_part_size)
 
@@ -60,7 +61,8 @@ class StreamUploader(object):
         self._buffer_len = 0
         self._multipart_uploader = None
         self._part_num = 1
-        self._thread_pool = ThreadPool()            # TODO 多线程上传
+        self._uploaded_len = 0                      # 已经上传字节数
+        self._thread_pool = ThreadPool()            # 多线程上传
 
     # TODO 增加上传字节数统计
     def write(self, data):
@@ -68,6 +70,10 @@ class StreamUploader(object):
 
         self._buffer.write(data)
         self._buffer_len += len(data)
+
+        if self._uploaded_len > CosFtpConfig().single_file_max_size:
+            logger.error("Uploading file exceeds the maximum file limit: {0}".format( str(CosFtpConfig().single_file_max_size).encode("utf-8") ) )
+            raise IOError( "Uploading file exceeds the maximum file limit: {0}".format( str(CosFtpConfig().single_file_max_size).encode("utf-8") ) )
 
         while self._buffer_len >= self._min_part_size:
             if not self._has_init:
@@ -81,6 +87,7 @@ class StreamUploader(object):
             else:
                 self._thread_pool.apply_async(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )
 
+            self._uploaded_len += self._min_part_size
             self._part_num += 1
             self._buffer_len -= self._min_part_size
             logger.info("upload new part with length: {0}".format(self._min_part_size))
@@ -103,6 +110,7 @@ class StreamUploader(object):
             self._thread_pool.join()
             self._multipart_uploader.complete_upload()
 
+        self._uploaded_len = 0
         self._buffer.close()
 
 
