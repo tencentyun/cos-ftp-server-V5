@@ -46,7 +46,7 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
 def main():
     port = CosFtpConfig().listen_port
 
-    external_ip = CosFtpConfig().passive_address
+    external_ip = CosFtpConfig().masquerade_address
 
     run(port=port, masquerade_address=external_ip)
 
