@@ -52,12 +52,12 @@ class CosFtpConfig:
             login_user = element.split(":")
             self.login_users.append(tuple(login_user))
 
-        self.passive_address = None
-        if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "passive_address") and str(cfg.get("NETWORK", "passive_address")) != "":
-            if CosFtpConfig._check_ipv4(cfg.get("NETWORK", "passive_address")):
-                self.passive_address = cfg.get("NETWORK", "passive_address")
+        self.masquerade_address = None
+        if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "masquerade_address") and str(cfg.get("NETWORK", "masquerade_address")) != "":
+            if CosFtpConfig._check_ipv4(cfg.get("NETWORK", "masquerade_address")):
+                self.masquerade_address = cfg.get("NETWORK", "masquerade_address")
         else:
-            self.passive_address = None
+            self.masquerade_address = None
 
         self.listen_port = cfg.get("NETWORK", "listen_port")
 
@@ -77,10 +77,10 @@ class CosFtpConfig:
                "region: %s \n" \
                "homedir:%s \n" \
                "login_users: %s \n" \
-               "passive_address: %s \n" \
+               "masquerade_address: %s \n" \
                "listen_port: %s \n"\
                "single_file_max_size:%d \n" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.passive_address, self.listen_port, self.single_file_max_size)
+                                       self.login_users, self.masquerade_address, self.listen_port, self.single_file_max_size)
 
 # unittest
 if __name__ == "__main__":

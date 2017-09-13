@@ -67,7 +67,7 @@ cos_user_home_dir = /home/cos_ftp/data   # Ftp Server的工作目录
 login_users = user1:pass1:RW;user2:pass2:RW     # FTP 账户配置。配置格式为“用户名:密码:读写权限”，多个账户用分号分割
 
 [NETWORK]
-passive_address = XXX.XXX.XXX.XXX        # 针对多网卡的用户（既有内网IP，又有外网IP），建议这里明确指定一个固定的IP地址
+masquerade_address = XXX.XXX.XXX.XXX        # 如果FTP SERVER处于某个网关或NAT后，可以通过该配置项将网关的IP地址或域名指定给FTP
 listen_port = 2121					   # Ftp Server的监听端口，默认为2121，注意防火墙需要放行该端口
 
 [FILE_OPTION]
