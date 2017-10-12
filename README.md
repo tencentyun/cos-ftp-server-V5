@@ -12,8 +12,19 @@ Python解释器版本：Python 2.7
 
 依赖库：
 
-- cos-python-sdk-v5(included)
+- cos-python-sdk-v5(included)，requests（not included）， argparse（not included）
 - pyftpdlib(included)
+
+### 安装方法
+
+直接运行cos ftp server目录下的setup.py即可，需要联网安装依赖库。
+
+```
+python setup.py install   # 这里可能需要sudo或者root权限
+```
+
+如果requests和argparse库等依赖已经安装了的话，可以直接运行ftp_server.py启动ftp server
+
 
 ### 使用限制
 
