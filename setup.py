@@ -19,7 +19,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts':[
-            'cos_ftp_server=ftp_server:main'
+            'cos_ftp_server=ftp_v5.server:main'
         ],
     }
 )
