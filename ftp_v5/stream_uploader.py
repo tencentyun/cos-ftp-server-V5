@@ -3,6 +3,7 @@
 import logging
 import math
 from multiprocessing.pool import ThreadPool
+from multiprocessing.pool import cpu_count
 from cStringIO import StringIO
 
 import ftp_v5.conf.common_config
@@ -37,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 class StreamUploader(object):
 
-    MIN_PART_SIZE = 1 * ftp_v5.conf.common_config.MEGABYTE
+    MIN_PART_SIZE = 2 * ftp_v5.conf.common_config.MEGABYTE
     MAX_PART_SIZE = 5 * ftp_v5.conf.common_config.GIGABYTE
 
     def __init__(self, cos_client, bucket_name, object_name=None):
@@ -61,8 +62,8 @@ class StreamUploader(object):
         self._buffer_len = 0
         self._multipart_uploader = None
         self._part_num = 1
-        self._uploaded_len = 0                      # 已经上传字节数
-        self._thread_pool = ThreadPool()            # 多线程上传
+        self._uploaded_len = 0                                      # 已经上传字节数
+        self._thread_pool = ThreadPool(cpu_count() * 3)            # 多线程上传
 
     # TODO 增加上传字节数统计
     def write(self, data):
