@@ -8,7 +8,7 @@ def requirements():
 
 setup(
     name='cos-ftp-server-v5',
-    version='0.1.0',
+    version='0.1.2',
     url='https://cloud.tencent.com/',
     license='MIT',
     author='COS team',
