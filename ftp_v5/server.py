@@ -46,5 +46,6 @@ def main():
     port = CosFtpConfig().listen_port
 
     external_ip = CosFtpConfig().masquerade_address
+    passive_ports = CosFtpConfig().passive_ports;
 
-    run(port=port, masquerade_address=external_ip)
+    run(port=port, masquerade_address=external_ip, passive_ports = passive_ports)

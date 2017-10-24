@@ -59,7 +59,14 @@ class CosFtpConfig:
         else:
             self.masquerade_address = None
 
-        self.listen_port = cfg.get("NETWORK", "listen_port")
+        self.listen_port = int(cfg.get("NETWORK", "listen_port"))
+        passive_ports =cfg.get("NETWORK", 'passive_port').split(',')
+        if len(passive_ports) > 1:
+            self.passive_ports = range(int(passive_ports[0]), int(passive_ports[1]))
+        elif len(passive_ports) == 1:
+            self.passive_ports = range(int(passive_ports[0]), 65535)
+        else:
+            self.passive_ports = range(60000, 65535)
 
         if cfg.has_section("FILE_OPTION") and cfg.has_option("FILE_OPTION", "single_file_max_size"):
             self.single_file_max_size = int(cfg.get("FILE_OPTION", "single_file_max_size"))
@@ -78,9 +85,10 @@ class CosFtpConfig:
                "homedir:%s \n" \
                "login_users: %s \n" \
                "masquerade_address: %s \n" \
-               "listen_port: %s \n"\
+               "listen_port: %d \n" \
+               "passive_ports: %s \n" \
                "single_file_max_size:%d \n" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.single_file_max_size)
+                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size)
 
 # unittest
 if __name__ == "__main__":
