@@ -40,6 +40,8 @@ import signal
 import sys
 import time
 import traceback
+import thread
+import time
 
 from .ioloop import Acceptor
 from .ioloop import IOLoop
@@ -390,6 +392,7 @@ class _SpawnerBase(FTPServer):
             self.ioloop.unregister(handler._fileno)
 
             t = self._start_task(target=self._loop, args=(handler,))
+            t.daemon = True
             t.name = repr(addr)
             t.start()
 
@@ -415,6 +418,9 @@ class _SpawnerBase(FTPServer):
             if log:
                 self._log_start()
             try:
+                thread = threading.Thread(target=self.wait_tasks_gracefully)
+                thread.daemon = True
+                thread.start()
                 self.ioloop.loop(timeout, blocking)
             except (KeyboardInterrupt, SystemExit):
                 pass
@@ -426,6 +432,13 @@ class _SpawnerBase(FTPServer):
                 self.close_all()
         else:
             self.ioloop.loop(timeout, blocking)
+
+    def wait_tasks_gracefully(self):
+        while True:
+            tasks = self._active_tasks[:]
+            self._wait_for_tasks(tasks)
+            time.sleep(5)
+
 
     def close_all(self):
         tasks = self._active_tasks[:]
@@ -467,6 +480,7 @@ class _SpawnerBase(FTPServer):
                     if not _BSD:
                         warn(msg + "; sending SIGKILL as last resort")
                         try:
+                            logger.info("")
                             os.kill(t.pid, signal.SIGKILL)
                         except OSError as err:
                             if err.errno != errno.ESRCH:
