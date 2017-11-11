@@ -1,0 +1,20 @@
+[COS_ACCOUNT]
+cos_appid = 12XXXXXX
+cos_secretid = XXXXXX
+cos_secretkey = XXXXXX
+cos_bucket = XXXXX
+cos_region = ap-xxx
+cos_user_home_dir = /home/cos_ftp/data
+[FTP_ACCOUNT]
+login_users = user1:pass1:RW;user2:pass2:RW
+
+[NETWORK]
+masquerade_address = XXX.XXX.XXX.XXX
+listen_port = 2121
+
+#passive_port可以设置passive模式下，端口的选择范围，默认在(60000, 65535)区间上选择
+passive_port = 60000,65535
+
+[FILE_OPTION]
+# 默认单文件大小最大支持到200G，不建议设置太大
+single_file_max_size = 214748364800
