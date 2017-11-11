@@ -39,7 +39,10 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
 
     server = MultiprocessFTPServer(("0.0.0.0", port), handler)
 
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        server.close_all()
 
 
 def main():
