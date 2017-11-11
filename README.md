@@ -64,7 +64,7 @@ python setup.py install   # 这里可能需要sudo或者root权限
 
 ## 配置文件
 
-conf/vsftpd.conf为Ftp Server工具的配置文件，相关配置项的说明如下：
+conf/vsftpd.conf.example为Ftp Server工具的配置文件示例，请copy为vsftpd.conf，并按照以下的配置项进行配置：
 
 ``` conf
 [COS_ACCOUNT]
