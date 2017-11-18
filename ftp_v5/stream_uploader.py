@@ -83,7 +83,7 @@ class StreamUploader(object):
                 self._has_init = True
                 self._part_num = 1
 
-            if self._part_num % 3 == 0:
+            if self._part_num %  (cpu_count() * 3) == 0:
                 self._thread_pool.apply(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )
             else:
                 self._thread_pool.apply_async(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )
