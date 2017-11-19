@@ -38,9 +38,9 @@ logger = logging.getLogger(__name__)
 
 class StreamUploader(object):
 
-    MIN_PART_SIZE = CosFtpConfig.min_part_size
+    MIN_PART_SIZE = CosFtpConfig().min_part_size
     MAX_PART_SIZE = 5 * ftp_v5.conf.common_config.GIGABYTE
-    UPLOAD_THREAD_NUM = CosFtpConfig.upload_thread_num
+    UPLOAD_THREAD_NUM = CosFtpConfig().upload_thread_num
 
     def __init__(self, cos_client, bucket_name, object_name=None):
         self._cos_client = cos_client
