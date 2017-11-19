@@ -82,14 +82,18 @@ class CosFtpConfig:
                     self.min_part_size = int(cfg.get("OPTIONAL", "min_part_size"))
             except ValueError:
                 logger.info("min_part_size use default setting.")
+            except TypeError:
+                logger.info("min_part_size user default setting")
 
         self.upload_thread_num = cpu_count() * 2
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "upload_thread_num"):
             try:
-                if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")):
+                if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")) <= cpu_count() * 8:
                     self.upload_thread_num = int("OPTIONAL", "upload_thread_num")
             except ValueError:
                 logger.info("upload_thread_num use default setting.")
+            except TypeError:
+                logger.info("upload thread_num user default setting.")
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
