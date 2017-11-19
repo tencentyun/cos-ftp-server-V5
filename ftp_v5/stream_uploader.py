@@ -38,8 +38,9 @@ logger = logging.getLogger(__name__)
 
 class StreamUploader(object):
 
-    MIN_PART_SIZE = 2 * ftp_v5.conf.common_config.MEGABYTE
+    MIN_PART_SIZE = CosFtpConfig.min_part_size
     MAX_PART_SIZE = 5 * ftp_v5.conf.common_config.GIGABYTE
+    UPLOAD_THREAD_NUM = CosFtpConfig.upload_thread_num
 
     def __init__(self, cos_client, bucket_name, object_name=None):
         self._cos_client = cos_client
@@ -62,8 +63,8 @@ class StreamUploader(object):
         self._buffer_len = 0
         self._multipart_uploader = None
         self._part_num = 1
-        self._uploaded_len = 0                                      # 已经上传字节数
-        self._thread_pool = ThreadPool(cpu_count() * 3)            # 多线程上传
+        self._uploaded_len = 0                                                      # 已经上传字节数
+        self._thread_pool = ThreadPool(StreamUploader.UPLOAD_THREAD_NUM)            # 多线程上传
 
     # TODO 增加上传字节数统计
     def write(self, data):
@@ -83,7 +84,7 @@ class StreamUploader(object):
                 self._has_init = True
                 self._part_num = 1
 
-            if self._part_num %  (cpu_count() * 3) == 0:
+            if self._part_num % StreamUploader.UPLOAD_THREAD_NUM == 0:
                 self._thread_pool.apply(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )
             else:
                 self._thread_pool.apply_async(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )

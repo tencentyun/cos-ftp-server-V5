@@ -6,6 +6,8 @@ import platform
 import logging
 import ftp_v5.conf.common_config
 
+from multiprocessing import cpu_count
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,6 +75,22 @@ class CosFtpConfig:
         else:
             self.single_file_max_size = 200 * ftp_v5.conf.common_config.GIGABYTE                            # 默认单文件最大为200G
 
+        self.min_part_size = 1 * ftp_v5.conf.common_config.MEGABYTE
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "min_part_size"):
+            try:
+                if int(cfg.get("OPTIONAL","min_part_size")) > 0 and int(cfg.get("OPTIONAL", "min_part_size")) < 5 * ftp_v5.conf.common_config.GIGABYTE:
+                    self.min_part_size = int(cfg.get("OPTIONAL", "min_part_size"))
+            except ValueError:
+                logger.info("min_part_size use default setting.")
+
+        self.upload_thread_num = cpu_count() * 2
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "upload_thread_num"):
+            try:
+                if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")):
+                    self.upload_thread_num = int("OPTIONAL", "upload_thread_num")
+            except ValueError:
+                logger.info("upload_thread_num use default setting.")
+
     def __repr__(self):
         return "%s()" % self.__class__.__name__
 
@@ -87,8 +105,10 @@ class CosFtpConfig:
                "masquerade_address: %s \n" \
                "listen_port: %d \n" \
                "passive_ports: %s \n" \
-               "single_file_max_size:%d \n" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size)
+               "single_file_max_size:%d \n" \
+               "min_part_size: %d \n" \
+               "upload_thread_num: %d" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num)
 
 # unittest
 if __name__ == "__main__":
