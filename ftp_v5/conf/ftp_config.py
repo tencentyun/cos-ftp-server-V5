@@ -75,7 +75,7 @@ class CosFtpConfig:
         else:
             self.single_file_max_size = 200 * ftp_v5.conf.common_config.GIGABYTE                            # 默认单文件最大为200G
 
-        self.min_part_size = 1 * ftp_v5.conf.common_config.MEGABYTE
+        self.min_part_size = 2 * ftp_v5.conf.common_config.MEGABYTE
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "min_part_size"):
             try:
                 if int(cfg.get("OPTIONAL","min_part_size")) > 0 and int(cfg.get("OPTIONAL", "min_part_size")) < 5 * ftp_v5.conf.common_config.GIGABYTE:
@@ -85,7 +85,7 @@ class CosFtpConfig:
             except TypeError:
                 logger.info("min_part_size user default setting")
 
-        self.upload_thread_num = cpu_count() * 2
+        self.upload_thread_num = cpu_count() * 4
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "upload_thread_num"):
             try:
                 if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")) <= cpu_count() * 8:
