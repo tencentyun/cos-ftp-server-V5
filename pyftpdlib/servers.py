@@ -418,9 +418,9 @@ class _SpawnerBase(FTPServer):
             if log:
                 self._log_start()
             try:
-                thread = threading.Thread(target=self.wait_tasks_gracefully)
-                thread.daemon = True
-                thread.start()
+                # thread = threading.Thread(target=self.wait_tasks_gracefully)
+                # thread.daemon = True
+                # thread.start()
                 self.ioloop.loop(timeout, blocking)
             except (KeyboardInterrupt, SystemExit):
                 pass
@@ -438,7 +438,6 @@ class _SpawnerBase(FTPServer):
             tasks = self._active_tasks[:]
             self._wait_for_tasks(tasks)
             time.sleep(5)
-
 
     def close_all(self):
         tasks = self._active_tasks[:]

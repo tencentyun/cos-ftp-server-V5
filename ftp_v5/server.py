@@ -4,7 +4,7 @@
 import sys
 import logging
 
-from pyftpdlib.servers import FTPServer, MultiprocessFTPServer
+from pyftpdlib.servers import ThreadedFTPServer
 
 from ftp_v5.cos_authorizer import CosAuthorizer
 from ftp_v5.cos_ftp_handler import CosFtpHandler
@@ -37,7 +37,7 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
 
     handler.passive_ports = passive_ports
 
-    server = MultiprocessFTPServer(("0.0.0.0", port), handler)
+    server = ThreadedFTPServer(("0.0.0.0", port), handler)
 
     try:
         server.serve_forever()
@@ -49,6 +49,6 @@ def main():
     port = CosFtpConfig().listen_port
 
     external_ip = CosFtpConfig().masquerade_address
-    passive_ports = CosFtpConfig().passive_ports;
+    passive_ports = CosFtpConfig().passive_ports
 
-    run(port=port, masquerade_address=external_ip, passive_ports = passive_ports)
+    run(port=port, masquerade_address=external_ip, passive_ports=passive_ports)
