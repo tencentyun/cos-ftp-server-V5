@@ -89,7 +89,7 @@ class CosFtpConfig:
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "upload_thread_num"):
             try:
                 if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")) <= cpu_count() * 8:
-                    self.upload_thread_num = int("OPTIONAL", "upload_thread_num")
+                    self.upload_thread_num = int(cfg.get("OPTIONAL", "upload_thread_num"))
             except ValueError:
                 logger.info("upload_thread_num use default setting.")
             except TypeError:
