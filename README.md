@@ -87,7 +87,14 @@ passive_ports = 60000,65535             # #passive_port可以设置passive模式
 # 默认单文件大小最大支持到200G，不建议设置太大
 single_file_max_size = 21474836480
 
+[OPTIONAL]
+# 以下设置，如无特殊需要，建议保留default设置  如需设置，请合理填写一个整数
+min_part_size       = default
+upload_thread_num   = default
+
 ```
+
+上述的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
 
 ## 运行方法
 
