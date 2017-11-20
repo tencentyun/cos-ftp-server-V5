@@ -91,9 +91,20 @@ class CosFtpConfig:
                 if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")) <= cpu_count() * 8:
                     self.upload_thread_num = int(cfg.get("OPTIONAL", "upload_thread_num"))
             except ValueError:
-                logger.info("upload_thread_num use default setting.")
+                pass
             except TypeError:
-                logger.info("upload thread_num user default setting.")
+                pass
+
+        self.max_connection_num = 512
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "max_connection_num"):
+            try:
+                if int(cfg.get("OPTIONAL", "max_connection_num")) > 0:
+                    self.max_connection_num = int(cfg.get("OPTIONAL", "max_connection_num"))
+            except ValueError:
+                pass
+            except TypeError:
+                pass
+
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
@@ -111,8 +122,9 @@ class CosFtpConfig:
                "passive_ports: %s \n" \
                "single_file_max_size:%d \n" \
                "min_part_size: %d \n" \
-               "upload_thread_num: %d" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num)
+               "upload_thread_num: %d \n" \
+               "max_connection_num: %d" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num)
 
 # unittest
 if __name__ == "__main__":

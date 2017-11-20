@@ -23,3 +23,4 @@ single_file_max_size = 214748364800
 # 以下设置，如无特殊需要，建议保留default设置  如需设置，请合理填写一个整数
 min_part_size       = default
 upload_thread_num   = default
+max_connection_num  = 512

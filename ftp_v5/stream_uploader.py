@@ -64,7 +64,7 @@ class StreamUploader(object):
         self._multipart_uploader = None
         self._part_num = 1
         self._uploaded_len = 0                                                      # 已经上传字节数
-        self._thread_pool = ThreadPool(StreamUploader.UPLOAD_THREAD_NUM)            # 多线程上传
+        self._thread_pool = None
 
     # TODO 增加上传字节数统计
     def write(self, data):
@@ -79,6 +79,7 @@ class StreamUploader(object):
 
         while self._buffer_len >= self._min_part_size:
             if not self._has_init:
+                self._thread_pool = ThreadPool(StreamUploader.UPLOAD_THREAD_NUM)  # 多线程上传
                 response = self._cos_client.create_multipart_upload(Bucket=self._bucket_name, Key=self._key_name)
                 self._multipart_uploader = MultipartUpload(self._cos_client, response)
                 self._has_init = True
