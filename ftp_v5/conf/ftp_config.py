@@ -81,9 +81,9 @@ class CosFtpConfig:
                 if int(cfg.get("OPTIONAL","min_part_size")) > 0 and int(cfg.get("OPTIONAL", "min_part_size")) < 5 * ftp_v5.conf.common_config.GIGABYTE:
                     self.min_part_size = int(cfg.get("OPTIONAL", "min_part_size"))
             except ValueError:
-                logger.info("min_part_size use default setting.")
+                pass
             except TypeError:
-                logger.info("min_part_size user default setting")
+                pass
 
         self.upload_thread_num = cpu_count() * 4
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "upload_thread_num"):
