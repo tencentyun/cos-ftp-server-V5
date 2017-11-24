@@ -219,9 +219,9 @@ class CosFileSystem(AbstractedFS):
         list_name = list()
         max_list_file = CosFtpConfig().max_list_file
         if dir_name == "/":                                                     # 如果是根目录
-            isTruncated= False
+            isTruncated= True
             next_marker = str("")
-            while not isTruncated and max_list_file > 0 and next_marker is not None:
+            while isTruncated and max_list_file > 0 and next_marker is not None:
                 response = self._cos_client.list_objects(Bucket=self._bucket_name,
                                                          Delimiter="/",
                                                          Marker=next_marker)
@@ -237,9 +237,9 @@ class CosFileSystem(AbstractedFS):
             return list_name
 
         if len(dir_name.split("/")) >= 2:                                       # 二级以上目录
-            isTruncated = False
+            isTruncated = True
             next_marker = str("")
-            while not isTruncated and max_list_file > 0 and next_marker is not None:
+            while isTruncated and max_list_file > 0 and next_marker is not None:
                 response = self._cos_client.list_objects(Bucket=self._bucket_name,
                                                          Prefix=(dir_name.strip("/") + "/"),
                                                          Delimiter="/",
