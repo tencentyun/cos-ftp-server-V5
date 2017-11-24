@@ -224,18 +224,17 @@ class CosFileSystem(AbstractedFS):
             while not isTruncated and max_list_file > 0 and next_marker is not None:
                 response = self._cos_client.list_objects(Bucket=self._bucket_name,
                                                          Delimiter="/",
-                                                         Marker=next_marker,
-                                                         MaxKeys=1000)
+                                                         Marker=next_marker)
                 tmp_list = self._gen_list(response)
                 list_name.extend(tmp_list)
                 max_list_file -= len(tmp_list)
                 if response['IsTruncated'] == 'true':
                     isTruncated = True
-                    next_marker = response['Marker']
+                    next_marker = response['NextMarker']
                 else:
                     isTruncated = False
 
-                return list_name
+            return list_name
 
         if len(dir_name.split("/")) >= 2:                                       # 二级以上目录
             isTruncated = False
@@ -244,19 +243,18 @@ class CosFileSystem(AbstractedFS):
                 response = self._cos_client.list_objects(Bucket=self._bucket_name,
                                                          Prefix=(dir_name.strip("/") + "/"),
                                                          Delimiter="/",
-                                                         Marker=next_marker,
-                                                         MaxKeys=1000)
+                                                         Marker=next_marker)
 
                 tmp_list = self._gen_list(response)
                 list_name.extend(tmp_list)
                 max_list_file -= len(tmp_list)
                 if response['IsTruncated'] == 'true':
                     isTruncated = True
-                    next_marker = response['Marker']
+                    next_marker = response['NextMarker']
                 else:
                     isTruncated = False
 
-                return list_name
+            return list_name
 
     def isfile(self, path):
         logger.info("user invoke isfile for {0}".format(str(path).encode("utf-8")))
