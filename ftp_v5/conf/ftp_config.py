@@ -105,6 +105,15 @@ class CosFtpConfig:
             except TypeError:
                 pass
 
+        self.max_list_file = 1000
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "max_list_file"):
+            try:
+                if int(cfg.get("OPTIONAL", "max_list_file")) > 0:
+                    self.max_list_file = int(cfg.get("OPTIONAL", "max_list_file"))
+            except ValueError:
+                pass
+            except TypeError:
+                pass
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
@@ -123,8 +132,9 @@ class CosFtpConfig:
                "single_file_max_size:%d \n" \
                "min_part_size: %d \n" \
                "upload_thread_num: %d \n" \
-               "max_connection_num: %d" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num)
+               "max_connection_num: %d \n" \
+               "max_list_file: %d " % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num, self.max_list_file)
 
 # unittest
 if __name__ == "__main__":

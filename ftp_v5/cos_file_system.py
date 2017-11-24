@@ -217,20 +217,46 @@ class CosFileSystem(AbstractedFS):
         logger.debug("dir_name: {0}".format(str(dir_name).encode("utf-8")))
 
         list_name = list()
+        max_list_file = CosFtpConfig().max_list_file
         if dir_name == "/":                                                     # 如果是根目录
-            response = self._cos_client.list_objects(Bucket=self._bucket_name,
-                                                     Delimiter="/")
+            isTruncated= False
+            next_marker = str("")
+            while not isTruncated and max_list_file > 0 and next_marker is not None:
+                response = self._cos_client.list_objects(Bucket=self._bucket_name,
+                                                         Delimiter="/",
+                                                         Marker=next_marker,
+                                                         MaxKeys=1000)
+                tmp_list = self._gen_list(response)
+                list_name.extend(tmp_list)
+                max_list_file -= len(tmp_list)
+                if response['IsTruncated'] == 'true':
+                    isTruncated = True
+                    next_marker = response['Marker']
+                else:
+                    isTruncated = False
 
-            list_name.extend(self._gen_list(response))
-            return list_name
+                return list_name
 
         if len(dir_name.split("/")) >= 2:                                       # 二级以上目录
-            response = self._cos_client.list_objects(Bucket=self._bucket_name,
-                                                     Prefix=(dir_name.strip("/") + "/"),
-                                                     Delimiter="/")
+            isTruncated = False
+            next_marker = str("")
+            while not isTruncated and max_list_file > 0 and next_marker is not None:
+                response = self._cos_client.list_objects(Bucket=self._bucket_name,
+                                                         Prefix=(dir_name.strip("/") + "/"),
+                                                         Delimiter="/",
+                                                         Marker=next_marker,
+                                                         MaxKeys=1000)
 
-            list_name.extend(self._gen_list(response))
-            return list_name
+                tmp_list = self._gen_list(response)
+                list_name.extend(tmp_list)
+                max_list_file -= len(tmp_list)
+                if response['IsTruncated'] == 'true':
+                    isTruncated = True
+                    next_marker = response['Marker']
+                else:
+                    isTruncated = False
+
+                return list_name
 
     def isfile(self, path):
         logger.info("user invoke isfile for {0}".format(str(path).encode("utf-8")))

@@ -24,3 +24,4 @@ single_file_max_size = 214748364800
 min_part_size       = default
 upload_thread_num   = default
 max_connection_num  = 512
+max_list_file       = 10000
