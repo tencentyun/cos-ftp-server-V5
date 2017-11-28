@@ -3,6 +3,7 @@
 import logging
 import math
 import threading
+import time
 from cStringIO import StringIO
 import ftp_v5.conf.common_config
 from ftp_v5.conf.ftp_config import CosFtpConfig
@@ -26,17 +27,19 @@ class FifoBuffer(object):
 
         self.buf.extend(data)
 
-
     def close(self):
         del self.buf[:]
 
 logger = logging.getLogger(__name__)
+
 
 class StreamUploader(object):
 
     MIN_PART_SIZE = CosFtpConfig().min_part_size
     MAX_PART_SIZE = 5 * ftp_v5.conf.common_config.GIGABYTE
     UPLOAD_THREAD_NUM = CosFtpConfig().upload_thread_num
+
+    _lock = threading.Lock()
 
     def __init__(self, cos_client, bucket_name, object_name=None):
         self._cos_client = cos_client
@@ -49,7 +52,7 @@ class StreamUploader(object):
         self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
 
         if self._min_part_size < StreamUploader.MIN_PART_SIZE:
-            self._min_part_size = StreamUploader.MIN_PART_SIZE              # part size 最小限制为1MB
+            self._min_part_size = StreamUploader.MIN_PART_SIZE                      # part size 最小限制为1MB
 
         logger.info("Min part size: %d" % self._min_part_size)
 
@@ -61,15 +64,6 @@ class StreamUploader(object):
         self._part_num = 1
         self._uploaded_len = 0                                                      # 已经上传字节数
         self._upload_pool = None
-
-    def _wait_for_finish(self):
-        self._notify_semaphore.acquire()
-        if not self._isSuccesss:
-            raise IOError("Uploading file failed!")
-        else:
-            self._part_num += 1
-            self._uploaded_len += self._min_part_size
-            self._isSuccesss = False
 
     def write(self, data):
         logger.debug("Receive string with length : {0}".format(len(data)))
@@ -86,21 +80,41 @@ class StreamUploader(object):
                 response = self._cos_client.create_multipart_upload(Bucket=self._bucket_name, Key=self._key_name)
                 self._multipart_uploader = MultipartUpload(self._cos_client, response)
                 self._part_num = 0
-                self._notify_semaphore = threading.Semaphore(1)
+                self._uploaded_part = dict()
                 self._uploaded_len -= self._min_part_size
-                self._isSuccesss = True
                 self._has_init = True
 
-            def upload_callback(isSuccess):
-                self._isSuccesss = isSuccess
-                self._notify_semaphore.release()
+            def callback(part_num, result):
+                with StreamUploader._lock:
+                    self._uploaded_part[part_num] = result
 
-            self._wait_for_finish()
-            self._upload_pool.apply_task(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._next_part), callback=upload_callback)
+            def check_finish():
+                for part_num, result in self._uploaded_part:
+                    if not result:
+                        logger.error("Uploading file failed. Failed part_num: %d " % part_num)
+                        raise IOError("Uploading part_num: %d failed." % part_num)
+
+            check_finish()
+            self._upload_pool.apply_task(self._multipart_uploader.upload_part, (self._buffer.read(self._min_part_size), self._next_part, callback))
 
             self._buffer_len -= self._min_part_size                        # 只要提交到并发上传的线程池中，就可以减掉了
 
             logger.info("upload new part with length: {0}".format(self._min_part_size))
+
+    def _wait_for_finish(self):
+        isFinish = False
+        while not isFinish:
+            for part_num, result in self._uploaded_part:
+                if not result:
+                    logger.error("Uploading file failed. Failed part_num: " % part_num)
+                    raise IOError("Uploading part_num: %d failed. " % part_num)
+                if result is None:
+                    break
+            else:
+                isFinish = True
+
+            if not isFinish:
+                time.sleep(10 / 1000)       # 休眠10毫秒
 
     def close(self):
         logger.info("Closing the stream upload...")

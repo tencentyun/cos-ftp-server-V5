@@ -35,13 +35,13 @@ class MultipartUpload(object):
             )
         except Exception as e:
             logger.exception(e)
-            callback(False)               # 如果上传成功，需要回调通知
+            callback(part_num, False)               # 如果上传成功，需要回调通知
 
         dict_etag = dict()
         dict_etag['ETag'] = dict_response['ETag'].strip('"')
         dict_etag['PartNumber'] = part_num
         self._multipart_upload['Part'].append(dict_etag)
-        callback(True)
+        callback(part_num, True)
 
         return dict_response           # xxx
 
