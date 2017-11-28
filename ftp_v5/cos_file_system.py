@@ -59,7 +59,7 @@ class CosFileSystem(AbstractedFS):
         self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
                                                  Region=CosFtpConfig().region,
                                                  Access_id=CosFtpConfig().secretid,
-                                                 Access_key=CosFtpConfig().secretkey))
+                                                 Access_key=CosFtpConfig().secretkey), retry=3)
         self._bucket_name = CosFtpConfig().bucket
 
     @property

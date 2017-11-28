@@ -47,7 +47,7 @@ Usage example:
 >>> from pyftpdlib.servers import FTPServer
 >>>
 >>> authorizer = DummyAuthorizer()
->>> authorizer.add_user("user", "12345", "/home/giampaolo", perm="elradfmw")
+>>> authorizer.add_user("user", "12345", "/home/giampaolo", perm="elradfmwMT")
 >>> authorizer.add_anonymous("/home/nobody")
 >>>
 >>> handler = FTPHandler
@@ -68,6 +68,6 @@ Usage example:
 """
 
 
-__ver__ = '1.5.2'
+__ver__ = '1.5.3'
 __author__ = "Giampaolo Rodola' <g.rodola@gmail.com>"
 __web__ = 'https://github.com/giampaolo/pyftpdlib/'

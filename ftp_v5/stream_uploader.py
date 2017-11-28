@@ -2,39 +2,35 @@
 
 import logging
 import math
-from multiprocessing.pool import ThreadPool
-from multiprocessing.pool import cpu_count
+import threading
 from cStringIO import StringIO
-
 import ftp_v5.conf.common_config
 from ftp_v5.conf.ftp_config import CosFtpConfig
 from ftp_v5.multipart_upload import MultipartUpload
+from ftp_v5.upload_pool import UploadPool
 
 
 class FifoBuffer(object):
-    def __init__(self):
-        self.buf = StringIO()
+    def __init__(self, fixed_buf_len):
+        self._fixed_buf_len = fixed_buf_len
+        self._buf = bytearray()
 
-    def read(self, *args, **kwargs):
-        return self.buf.read(*args, **kwargs)
+    def read(self, read_len):
+        read_buf = self._buf[:read_len]
+        del self.buf[:read_len]
+        return str(read_buf)
 
-    def write(self, *args, **kwargs):
-        current_read_fp = self.buf.tell()
-        if current_read_fp > 10 * ftp_v5.conf.common_config.MEGABYTE:
-            new_buf = StringIO()
-            new_buf.write(self.buf.read())
-            self.buf = new_buf
-            current_read_fp = 0
+    def write(self, data):
+        if len(self.buf) + len(data) > self._fixed_buf_len:
+            raise IOError("buf is full")
 
-        self.buf.seek(0, 2)
-        self.buf.write(*args, **kwargs)
-        self.buf.seek(current_read_fp)
+        self.buf.extend(data)
+
 
     def close(self):
-        self.buf.close()
+        del self.buf[:]
 
 logger = logging.getLogger(__name__)
-
 
 class StreamUploader(object):
 
@@ -59,18 +55,25 @@ class StreamUploader(object):
 
         self._has_init = False
         self._has_commit = False
-        self._buffer = FifoBuffer()
+        self._buffer = FifoBuffer(self._min_part_size + 1 * ftp_v5.conf.common_config.MEGABYTE)
         self._buffer_len = 0
         self._multipart_uploader = None
         self._part_num = 1
         self._uploaded_len = 0                                                      # 已经上传字节数
-        self._thread_pool = None
+        self._upload_pool = None
 
-    # TODO 增加上传字节数统计
+    def _wait_for_finish(self):
+        self._notify_semaphore.acquire()
+        if not self._isSuccesss:
+            raise IOError("Uploading file failed!")
+        else:
+            self._part_num += 1
+            self._uploaded_len += self._min_part_size
+            self._isSuccesss = False
+
     def write(self, data):
         logger.debug("Receive string with length : {0}".format(len(data)))
 
-        self._buffer.write(data)
         self._buffer_len += len(data)
 
         if self._uploaded_len > CosFtpConfig().single_file_max_size:
@@ -79,20 +82,24 @@ class StreamUploader(object):
 
         while self._buffer_len >= self._min_part_size:
             if not self._has_init:
-                self._thread_pool = ThreadPool(StreamUploader.UPLOAD_THREAD_NUM)  # 多线程上传
+                self._upload_pool = UploadPool()
                 response = self._cos_client.create_multipart_upload(Bucket=self._bucket_name, Key=self._key_name)
                 self._multipart_uploader = MultipartUpload(self._cos_client, response)
+                self._part_num = 0
+                self._notify_semaphore = threading.Semaphore(1)
+                self._uploaded_len -= self._min_part_size
+                self._isSuccesss = True
                 self._has_init = True
-                self._part_num = 1
 
-            if self._part_num % StreamUploader.UPLOAD_THREAD_NUM == 0:
-                self._thread_pool.apply(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )
-            else:
-                self._thread_pool.apply_async(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._part_num) )
+            def upload_callback(isSuccess):
+                self._isSuccesss = isSuccess
+                self._notify_semaphore.release()
 
-            self._uploaded_len += self._min_part_size
-            self._part_num += 1
-            self._buffer_len -= self._min_part_size
+            self._wait_for_finish()
+            self._upload_pool.apply_task(self._multipart_uploader.upload_part, (StringIO(self._buffer.read(self._min_part_size)), self._next_part), callback=upload_callback)
+
+            self._buffer_len -= self._min_part_size                        # 只要提交到并发上传的线程池中，就可以减掉了
+
             logger.info("upload new part with length: {0}".format(self._min_part_size))
 
     def close(self):
@@ -106,11 +113,11 @@ class StreamUploader(object):
                                             Body=self._buffer.read(self._buffer_len),
                                             Key=self._key_name)
             else:
+                self._wait_for_finish()
                 self._multipart_uploader.upload_part(StringIO(self._buffer.read(self._min_part_size)), self._part_num)
 
         if self._has_init:
-            self._thread_pool.close()
-            self._thread_pool.join()
+            self._upload_pool.close()
             self._multipart_uploader.complete_upload()
 
         self._uploaded_len = 0
