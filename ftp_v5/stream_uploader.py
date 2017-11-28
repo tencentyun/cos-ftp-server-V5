@@ -18,17 +18,17 @@ class FifoBuffer(object):
 
     def read(self, read_len):
         read_buf = self._buf[:read_len]
-        del self.buf[:read_len]
+        del self._buf[:read_len]
         return str(read_buf)
 
     def write(self, data):
-        if len(self.buf) + len(data) > self._fixed_buf_len:
+        if len(self._buf) + len(data) > self._fixed_buf_len:
             raise IOError("buf is full")
 
-        self.buf.extend(data)
+        self._buf.extend(data)
 
     def close(self):
-        del self.buf[:]
+        del self._buf[:]
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +68,7 @@ class StreamUploader(object):
     def write(self, data):
         logger.debug("Receive string with length : {0}".format(len(data)))
 
+        self._buffer.write(data)
         self._buffer_len += len(data)
 
         if self._uploaded_len > CosFtpConfig().single_file_max_size:
@@ -79,35 +80,41 @@ class StreamUploader(object):
                 self._upload_pool = UploadPool()
                 response = self._cos_client.create_multipart_upload(Bucket=self._bucket_name, Key=self._key_name)
                 self._multipart_uploader = MultipartUpload(self._cos_client, response)
-                self._part_num = 0
+                self._part_num = 1
                 self._uploaded_part = dict()
-                self._uploaded_len -= self._min_part_size
                 self._has_init = True
 
             def callback(part_num, result):
                 with StreamUploader._lock:
-                    self._uploaded_part[part_num] = result
+                    self._uploaded_part[str(part_num)] = result
 
             def check_finish():
-                for part_num, result in self._uploaded_part:
-                    if not result:
-                        logger.error("Uploading file failed. Failed part_num: %d " % part_num)
-                        raise IOError("Uploading part_num: %d failed." % part_num)
+                if len(self._uploaded_part) == 0:
+                    return
+                for part_num, result in self._uploaded_part.items():
+                    if result is not None and  not result:
+                        logger.error("Uploading file failed. Failed part_num: %d " % int(part_num))
+                        raise IOError("Uploading part_num: %d failed." % int(part_num))
 
             check_finish()
-            self._upload_pool.apply_task(self._multipart_uploader.upload_part, (self._buffer.read(self._min_part_size), self._next_part, callback))
+            self._uploaded_part[str(self._part_num)] = None
+            self._upload_pool.apply_task(self._multipart_uploader.upload_part, (self._buffer.read(self._min_part_size), self._part_num, callback))
 
+            self._part_num += 1
             self._buffer_len -= self._min_part_size                        # 只要提交到并发上传的线程池中，就可以减掉了
+            self._uploaded_len += self._min_part_size
 
             logger.info("upload new part with length: {0}".format(self._min_part_size))
 
     def _wait_for_finish(self):
         isFinish = False
         while not isFinish:
-            for part_num, result in self._uploaded_part:
-                if not result:
-                    logger.error("Uploading file failed. Failed part_num: " % part_num)
-                    raise IOError("Uploading part_num: %d failed. " % part_num)
+            if len(self._uploaded_part) == 0:
+                return
+            for part_num, result in self._uploaded_part.items():
+                if result is not None and  not result:
+                    logger.error("Uploading file failed. Failed part_num: %d " % int(part_num))
+                    raise IOError("Uploading part_num: %d failed. " % int(part_num))
                 if result is None:
                     break
             else:
@@ -128,7 +135,7 @@ class StreamUploader(object):
                                             Key=self._key_name)
             else:
                 self._wait_for_finish()
-                self._multipart_uploader.upload_part(StringIO(self._buffer.read(self._min_part_size)), self._part_num)
+                self._multipart_uploader.upload_part(StringIO(self._buffer.read(self._min_part_size)), self._part_num, )
 
         if self._has_init:
             self._upload_pool.close()

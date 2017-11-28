@@ -26,7 +26,7 @@ class MultipartUpload(object):
         self._multipart_upload = dict()
         self._multipart_upload['Part'] = list()
 
-    def upload_part(self, content, part_num, callback):
+    def upload_part(self, content, part_num, callback=None):
         try:
             dict_response = self._cos_client.upload_part(
                 Bucket=self._bucket_name, Key=self._key_name,
@@ -35,13 +35,16 @@ class MultipartUpload(object):
             )
         except Exception as e:
             logger.exception(e)
-            callback(part_num, False)               # 如果上传成功，需要回调通知
+            if callback is not None:
+                callback(part_num, False)               # 如果上传成功，需要回调通知
 
         dict_etag = dict()
         dict_etag['ETag'] = dict_response['ETag'].strip('"')
         dict_etag['PartNumber'] = part_num
         self._multipart_upload['Part'].append(dict_etag)
-        callback(part_num, True)
+
+        if callback is not None:
+            callback(part_num, True)
 
         return dict_response           # xxx
 
