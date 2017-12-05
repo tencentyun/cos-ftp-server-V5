@@ -1,9 +1,7 @@
 # -*- coding:utf-8 -*-
 
 from ftp_v5.conf.ftp_config import CosFtpConfig
-
 from pyftpdlib.authorizers import DummyAuthorizer, AuthenticationFailed
-
 
 class CosAuthorizer(DummyAuthorizer):
 

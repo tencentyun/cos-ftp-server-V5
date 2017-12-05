@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-import sys
 import logging
 
-from pyftpdlib.servers import FTPServer
+from pyftpdlib.servers import FTPServer, MultiprocessFTPServer
 
 from ftp_v5.cos_authorizer import CosAuthorizer
 from ftp_v5.cos_ftp_handler import CosFtpHandler
@@ -15,8 +14,6 @@ logging.basicConfig(filename='pyftpd.log', level=logging.DEBUG)
 
 
 def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
-    print "starting  ftp server..."
-
     authorizer = CosAuthorizer()
     for login_user, login_password, permission in CosFtpConfig().login_users:
         perm = ""
@@ -37,8 +34,10 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
 
     handler.passive_ports = passive_ports
 
-    server = FTPServer(("0.0.0.0", port), handler)
+    server = FTPServer(("0.0.0.0", port), handler, backlog=CosFtpConfig().max_connection_num)
     server.max_cons = CosFtpConfig().max_connection_num
+
+    print "starting  ftp server..."
 
     try:
         server.serve_forever()

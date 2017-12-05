@@ -5,10 +5,11 @@ from ftp_v5.stream_uploader import StreamUploader
 from os import path
 from ftp_v5.utils import reformat_lm
 from qcloud_cos.cos_exception import CosException
+from qcloud_cos.cos_exception import CosServiceError
+from qcloud_cos.cos_exception import CosClientError
 from qcloud_cos.cos_client import CosS3Client
 from qcloud_cos.cos_client import CosConfig
 from ftp_v5.conf.ftp_config import CosFtpConfig
-
 import urllib
 import logging
 
@@ -32,7 +33,7 @@ class MockCosWriteFile(object):
 
     def write(self, data):
         self._uploader.write(data)
-        print "data_len:", len(data)
+        print "Recv data_len:", len(data)
         return len(data)
 
     def close(self):
@@ -40,11 +41,11 @@ class MockCosWriteFile(object):
         try:
             self._uploader.close()
         except Exception:
-            logger.exception("Upload failed")
-            raise IOError
+            logger.exception("453 Upload failed")
+            raise FilesystemError("453 Upload failed")
         finally:
-            logger.debug("Upload finish")
             self._closed = True
+            logger.debug("Uploading file has been closed.")
 
     @property
     def closed(self):
@@ -52,10 +53,8 @@ class MockCosWriteFile(object):
 
 
 class CosFileSystem(AbstractedFS):
-
     def __init__(self, *args, **kwargs):
         super(CosFileSystem, self).__init__(*args, **kwargs)
-
         self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
                                                  Region=CosFtpConfig().region,
                                                  Access_id=CosFtpConfig().secretid,
@@ -83,8 +82,18 @@ class CosFileSystem(AbstractedFS):
         logger.debug("key_name: {0}".format(str(key_name)))
 
         if 'r' in mode:
-            url = self._cos_client.get_presigned_download_url(Bucket=self._bucket_name, Key=key_name)
-            fd = urllib.urlopen(url)
+            try:
+                url = self._cos_client.get_presigned_download_url(Bucket=self._bucket_name, Key=key_name)
+                fd = urllib.urlopen(url)
+            except CosClientError as e:
+                logger.exception(e)
+                raise FilesystemError("455 Failed to open file[{0}] in read mode".format(str(ftp_path).encode("utf-8")))
+            except CosServiceError as e:
+                logger.exception(e)
+                raise FilesystemError("555 Failed to open file[{0}] in read mode".format(str(ftp_path).encode("utf-8")))
+            except Exception as e:
+                logger.exception(e)
+                raise FilesystemError("455 Failed to open file[{0}] in read mode".format(str(ftp_path).encode("utf-8")))
             return fd
         else:
             return MockCosWriteFile(self, self._bucket_name, key_name)
@@ -96,12 +105,23 @@ class CosFileSystem(AbstractedFS):
 
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")
-            response = self._cos_client.head_object(Bucket=self._bucket_name,
-                                                    Key=key_name)
+            try:
+                response = self._cos_client.head_object(Bucket=self._bucket_name,
+                                                        Key=key_name)
+            except CosClientError as e:
+                logger.exception(e)
+                raise FilesystemError("456 Failed to retrieve the file[{0}] attribute information.".format(str(key_name).encode("utf-8")))
+            except CosServiceError as e:
+                logger.exception(e)
+                raise FilesystemError("556 Failed to retrieve the file[{0}] attribute information".format(str(key_name).encode("utf-8")))
+            except Exception as e:
+                logger.exception(e)
+                raise FilesystemError("Failed to retrieve the file[{0}] attribute information".format(str(key_name).encode("utf-8")))
             return int(response["Content-Length"])
         elif self.isdir(path):
             return 0
         else:
+            logger.error("Path: {0} is invalid!".format(str(path).encode("utf-8")))
             raise FilesystemError("Path: {0} is invalid!".format(str(path).encode("utf-8")))
 
     def chdir(self, path):
@@ -125,15 +145,26 @@ class CosFileSystem(AbstractedFS):
         assert isinstance(path, unicode), path
 
         if self.isdir(path):
-            raise FilesystemError(path + "is a directory")
+            logger.error(path + " is a directory")
+            raise FilesystemError(path + " is a directory")
 
         ftp_path = self.fs2ftp(path)
         logger.debug("ftp_path: {0}".format(str(ftp_path).encode("utf-8")))
         dir_name = ftp_path.strip("/") + "/"
         logger.debug("key_name: {0}".format(str(dir_name).encode("utf-8")))
 
-        response = self._cos_client.put_object(Bucket=self._bucket_name, Body="",
-                                    Key=dir_name)
+        try:
+            response = self._cos_client.put_object(Bucket=self._bucket_name, Body="",
+                                                    Key=dir_name)
+        except CosClientError as e:
+            logger.exception(e)
+            raise FilesystemError("457 Make dir:{0} failed.".format(str(ftp_path).encode("utf-8")))
+        except CosServiceError as e:
+            logger.exception(e)
+            raise FilesystemError("557 Make dir:{0} failed.".format(str(ftp_path).encode('utf-8')))
+        except Exception as e:
+            logger.exception(e)
+            raise FilesystemError("Make dir:{0} failed".format(str(ftp_path).encode("utf-8")))
 
         logger.debug("response: {0}".format(str(response).encode("utf-8")))
 
@@ -154,9 +185,20 @@ class CosFileSystem(AbstractedFS):
             copy_source["Bucket"] = self._bucket_name
             copy_source["Key"] = src_key_name               # XXX 该不该带斜线
 
-            response = self._cos_client.copy_object(Bucket=self._bucket_name,
-                                                    Key=dest_key_name,
-                                                    CopySource=copy_source)
+            try:
+                response = self._cos_client.copy_object(Bucket=self._bucket_name,
+                                                        Key=dest_key_name,
+                                                        CopySource=copy_source)
+            except CosClientError as e:
+                logger.exception(e)
+                raise FilesystemError("458 Rename {0} to {1} failed.".format(str(src).encode("utf-8")), str(dest).encode("utf-8"))
+            except CosServiceError as e:
+                logger.exception(e)
+                raise FilesystemError("558 Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
+            except Exception as e:
+                logger.exception(e)
+                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8"),str(dest).encode("utf-8")))
+
             self._cos_client.delete_object(
                 Bucket=self._bucket_name,
                 Key=src_key_name
@@ -194,9 +236,9 @@ class CosFileSystem(AbstractedFS):
                     continue
 
                 if key_name.endswith("/"):
-                    list_dir.add( ("dir", 0, None, key_name) )
+                    list_dir.add(("dir", 0, None, key_name))
                 else:
-                    list_key.add( ("file", int(key['Size']), key['LastModified'], key_name) )
+                    list_key.add(("file", int(key['Size']), key['LastModified'], key_name))
 
         for dir in list_dir:
             list_name.append(dir)
@@ -222,17 +264,27 @@ class CosFileSystem(AbstractedFS):
             isTruncated= True
             next_marker = str("")
             while isTruncated and max_list_file > 0 and next_marker is not None:
-                response = self._cos_client.list_objects(Bucket=self._bucket_name,
-                                                         Delimiter="/",
-                                                         Marker=next_marker)
-                tmp_list = self._gen_list(response)
-                list_name.extend(tmp_list)
-                max_list_file -= len(tmp_list)
-                if response['IsTruncated'] == 'true':
-                    isTruncated = True
-                    next_marker = response['NextMarker']
-                else:
-                    isTruncated = False
+                try:
+                    response = self._cos_client.list_objects(Bucket=self._bucket_name,
+                                                             Delimiter="/",
+                                                             Marker=next_marker)
+                    tmp_list = self._gen_list(response)
+                    list_name.extend(tmp_list)
+                    max_list_file -= len(tmp_list)
+                    if response['IsTruncated'] == 'true':
+                        isTruncated = True
+                        next_marker = response['NextMarker']
+                    else:
+                        isTruncated = False
+                except CosClientError as e:
+                    logger.exception(e)
+                    raise FilesystemError("459 list dir:{0} failed.".format(ftp_path))
+                except CosServiceError as e:
+                    logger.exception(e)
+                    raise FilesystemError("559 list dir:{0} failed.".format(ftp_path))
+                except Exception as e:
+                    logger.exception(e)
+                    raise FilesystemError("list dir:{0} failed.".format(ftp_path))
 
             return list_name
 
@@ -240,26 +292,34 @@ class CosFileSystem(AbstractedFS):
             isTruncated = True
             next_marker = str("")
             while isTruncated and max_list_file > 0 and next_marker is not None:
-                response = self._cos_client.list_objects(Bucket=self._bucket_name,
-                                                         Prefix=(dir_name.strip("/") + "/"),
-                                                         Delimiter="/",
-                                                         Marker=next_marker)
-
-                tmp_list = self._gen_list(response)
-                list_name.extend(tmp_list)
-                max_list_file -= len(tmp_list)
-                if response['IsTruncated'] == 'true':
-                    isTruncated = True
-                    next_marker = response['NextMarker']
-                else:
-                    isTruncated = False
-
+                try:
+                    response = self._cos_client.list_objects(Bucket=self._bucket_name,
+                                                            Prefix=(dir_name.strip("/") + "/"),
+                                                            Delimiter="/",
+                                                            Marker=next_marker)
+                    tmp_list = self._gen_list(response)
+                    list_name.extend(tmp_list)
+                    max_list_file -= len(tmp_list)
+                    if response['IsTruncated'] == 'true':
+                        isTruncated = True
+                        next_marker = response['NextMarker']
+                    else:
+                        isTruncated = False
+                except CosClientError as e:
+                    logger.exception(e)
+                    raise FilesystemError("459 list dir:{0} failed.".format(ftp_path))
+                except CosServiceError as e:
+                    logger.exception(e)
+                    raise FilesystemError("559 list dir:{0} failed.".format(ftp_path))
+                except Exception as e:
+                    logger.exception(e)
+                    raise FilesystemError("list dir:{0} failed.".format(ftp_path))
             return list_name
 
     def isfile(self, path):
         logger.info("user invoke isfile for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path,unicode), path
+        assert isinstance(path, unicode), path
 
         if path.startswith("/"):
             ftp_path = self.fs2ftp(path)
@@ -269,13 +329,13 @@ class CosFileSystem(AbstractedFS):
                 response = self._cos_client.list_objects(Bucket=self._bucket_name,
                                                          Prefix=key_name,               # 假设就是个文件
                                                          Delimiter="/")
-
                 if "Contents" in response:
                     return True
                 else:
                     return False
             except CosException:
                 logger.error("Exception: {0}".format(str(CosException.message).encode("utf-8")))
+                raise FilesystemError(CosException.message)
                 return False
         else:
             return False
@@ -334,7 +394,17 @@ class CosFileSystem(AbstractedFS):
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")
             logger.debug("key_name: {0}".format(str(key_name).encode("utf-8")))
-            response = self._cos_client.delete_object(Bucket=self._bucket_name, Key=key_name)
+            try:
+                response = self._cos_client.delete_object(Bucket=self._bucket_name, Key=key_name)
+            except CosClientError as e:
+                logger.exception(e)
+                raise FilesystemError("460 Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
+            except CosServiceError as e:
+                logger.exception(e)
+                raise FilesystemError("560 Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
+            except Exception as e:
+                logger.exception(e)
+                raise FilesystemError("Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
             logger.debug("response: {0}".format(str(response).encode("utf-8")))
 
     def lexists(self, path):

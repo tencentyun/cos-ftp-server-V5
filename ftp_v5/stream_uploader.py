@@ -5,32 +5,43 @@ import math
 import threading
 import time
 from cStringIO import StringIO
+
 import ftp_v5.conf.common_config
 from ftp_v5.conf.ftp_config import CosFtpConfig
 from ftp_v5.multipart_upload import MultipartUpload
 from ftp_v5.upload_pool import UploadPool
 
+logger = logging.getLogger(__name__)
+
 
 class FifoBuffer(object):
-    def __init__(self, fixed_buf_len):
-        self._fixed_buf_len = fixed_buf_len
-        self._buf = bytearray()
+    def __init__(self):
+        logger.info("Thread name: %s  init a buf" % threading.currentThread().getName())
+        self._cur_read_pos = 0
+        self._cur_write_pos = 0
+        self._buf = StringIO()
 
     def read(self, read_len):
-        read_buf = self._buf[:read_len]
-        del self._buf[:read_len]
-        return str(read_buf)
+        self._buf.seek(self._cur_read_pos)                                          # 先定位文件指针到当前读指针的位置
+        read_buf = self._buf.read(read_len)                                         # 读出内容
+        last_content = self._buf.read(self._cur_write_pos - self._buf.tell())       # 读出尾部的东西
+        self._buf.seek(0)
+        self._buf.write(last_content)                                               # 将尾部拷贝到前面
+        self._cur_write_pos = self._buf.tell()
+        self._cur_read_pos = 0
+
+        return read_buf
 
     def write(self, data):
-        if len(self._buf) + len(data) > self._fixed_buf_len:
-            raise IOError("buf is full")
-
-        self._buf.extend(data)
+        self._buf.seek(self._cur_write_pos)
+        self._buf.write(data)
+        self._cur_write_pos = self._buf.tell()
 
     def close(self):
-        del self._buf[:]
-
-logger = logging.getLogger(__name__)
+        self._buf.seek(0, 2)
+        logger.info("closing buf, size:%d", self._buf.tell())
+        self._buf.close()
+        del self._buf
 
 
 class StreamUploader(object):
@@ -58,12 +69,13 @@ class StreamUploader(object):
 
         self._has_init = False
         self._has_commit = False
-        self._buffer = FifoBuffer(self._min_part_size + 1 * ftp_v5.conf.common_config.MEGABYTE)
+        self._buffer = FifoBuffer()
         self._buffer_len = 0
         self._multipart_uploader = None
-        self._part_num = 1
+        self._part_num = 1                                                          # 当前上传的分片号
+        self._uploaded_part = dict()                                                # 已经成功上传的分片
         self._uploaded_len = 0                                                      # 已经上传字节数
-        self._upload_pool = None
+        self._upload_pool = None                                                    # 用于并发上传的线程池子
 
     def write(self, data):
         logger.debug("Receive string with length : {0}".format(len(data)))
@@ -78,23 +90,22 @@ class StreamUploader(object):
         while self._buffer_len >= self._min_part_size:
             if not self._has_init:
                 self._upload_pool = UploadPool()
+                logger.info("upload pool id: %d", id(self._upload_pool))
                 response = self._cos_client.create_multipart_upload(Bucket=self._bucket_name, Key=self._key_name)
                 self._multipart_uploader = MultipartUpload(self._cos_client, response)
                 self._part_num = 1
-                self._uploaded_part = dict()
                 self._has_init = True
 
             def callback(part_num, result):
                 with StreamUploader._lock:
                     self._uploaded_part[str(part_num)] = result
+                    self._isSuccess = result
 
             def check_finish():
-                if len(self._uploaded_part) == 0:
-                    return
-                for part_num, result in self._uploaded_part.items():
-                    if result is not None and  not result:
-                        logger.error("Uploading file failed. Failed part_num: %d " % int(part_num))
-                        raise IOError("Uploading part_num: %d failed." % int(part_num))
+                if self._isSuccess is not None and not self._isSuccess:
+                    err_msg = "Uploading file failed."
+                    logger.error(err_msg)
+                    raise IOError(err_msg)
 
             check_finish()
             self._uploaded_part[str(self._part_num)] = None
@@ -107,10 +118,12 @@ class StreamUploader(object):
             logger.info("upload new part with length: {0}".format(self._min_part_size))
 
     def _wait_for_finish(self):
-        isFinish = False
-        while not isFinish:
+        is_finish = False
+
+        while not is_finish:
             if len(self._uploaded_part) == 0:
                 return
+
             for part_num, result in self._uploaded_part.items():
                 if result is not None and  not result:
                     logger.error("Uploading file failed. Failed part_num: %d " % int(part_num))
@@ -118,10 +131,10 @@ class StreamUploader(object):
                 if result is None:
                     break
             else:
-                isFinish = True
+                is_finish = True
 
-            if not isFinish:
-                time.sleep(10 / 1000)       # 休眠10毫秒
+            if not is_finish:
+                time.sleep(10 / 1000)                                        # 休眠10毫秒
 
     def close(self):
         logger.info("Closing the stream upload...")
@@ -134,11 +147,12 @@ class StreamUploader(object):
                                             Body=self._buffer.read(self._buffer_len),
                                             Key=self._key_name)
             else:
-                self._wait_for_finish()
-                self._multipart_uploader.upload_part(StringIO(self._buffer.read(self._min_part_size)), self._part_num, )
+                logger.info("Upload the last part")
+                self._multipart_uploader.upload_part(self._buffer.read(self._buffer_len), self._part_num)
 
         if self._has_init:
-            self._upload_pool.close()
+            logger.info("Wait for all the tasks to finish.")
+            self._wait_for_finish()
             self._multipart_uploader.complete_upload()
 
         self._uploaded_len = 0
