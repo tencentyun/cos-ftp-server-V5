@@ -33,18 +33,18 @@ class MockCosWriteFile(object):
 
     def write(self, data):
         self._uploader.write(data)
-        print "Recv data_len:", len(data)
+        print "Recv data_len: %d, file: %s" % (len(data), self._key_name)
         return len(data)
 
     def close(self):
-        logger.info("Closing upload file")
+        logger.info("Closing file: {0}".format(self._key_name))
         try:
             self._uploader.close()
         except Exception as e:
             logger.exception(e)
-            raise FilesystemError("453 Upload failed")
+            raise FilesystemError("453 Upload failed. File:{0}".format(self._key_name))
         finally:
-            logger.debug("Upload finish")
+            logger.debug("Upload finish. File:{0}".format(self._key_name))
             self._closed = True
 
     @property
@@ -87,13 +87,13 @@ class CosFileSystem(AbstractedFS):
                 fd = urllib.urlopen(url)
             except CosClientError as e:
                 logger.exception(e)
-                raise FilesystemError("455 Failed to open file[{0}] in read mode".format(str(ftp_path).encode("utf-8")))
+                raise FilesystemError("455 Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
             except CosServiceError as e:
                 logger.exception(e)
-                raise FilesystemError("555 Failed to open file[{0}] in read mode".format(str(ftp_path).encode("utf-8")))
+                raise FilesystemError("555 Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
             except Exception as e:
                 logger.exception(e)
-                raise FilesystemError("455 Failed to open file[{0}] in read mode".format(str(ftp_path).encode("utf-8")))
+                raise FilesystemError("455 Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
             return fd
         else:
             return MockCosWriteFile(self, self._bucket_name, key_name)
@@ -110,13 +110,13 @@ class CosFileSystem(AbstractedFS):
                                                         Key=key_name)
             except CosClientError as e:
                 logger.exception(e)
-                raise FilesystemError("456 Failed to retrieve the file[{0}] attribute information.".format(str(key_name).encode("utf-8")))
+                raise FilesystemError("456 Failed to retrieve the file {0} attribute information.".format(str(key_name).encode("utf-8")))
             except CosServiceError as e:
                 logger.exception(e)
-                raise FilesystemError("556 Failed to retrieve the file[{0}] attribute information".format(str(key_name).encode("utf-8")))
+                raise FilesystemError("556 Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
             except Exception as e:
                 logger.exception(e)
-                raise FilesystemError("Failed to retrieve the file[{0}] attribute information".format(str(key_name).encode("utf-8")))
+                raise FilesystemError("Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
             return int(response["Content-Length"])
         elif self.isdir(path):
             return 0

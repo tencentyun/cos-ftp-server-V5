@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 
+import threading
 import logging
 from qcloud_cos.cos_exception import CosException
 
@@ -56,13 +57,13 @@ class MultipartUpload(object):
 
         try:
             dict_response = self._cos_client.complete_multipart_upload(Bucket=self._bucket_name,
-                                                                        Key=self._key_name,
-                                                                        UploadId=self._upload_id,
-                                                                        MultipartUpload=self._multipart_upload)
+                                                                       Key=self._key_name,
+                                                                       UploadId=self._upload_id,
+                                                                       MultipartUpload=self._multipart_upload)
         except CosException as e:
             logger.exception(e)
-            logger.error("Complete upload failed")
+            logger.error("Complete upload failed. File:{0} Thread:{1}".format(self._key_name, threading.currentThread().getName()))
             raise e
         except Exception as e:
             logger.exception(e)
-            logger.error("Complete upload failed")
+            logger.error("Complete upload failed. File:{0} Thread:{1}".format(self._key_name, threading.currentThread().getName()))
