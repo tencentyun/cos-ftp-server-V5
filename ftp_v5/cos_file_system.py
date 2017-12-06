@@ -40,12 +40,12 @@ class MockCosWriteFile(object):
         logger.info("Closing upload file")
         try:
             self._uploader.close()
-        except Exception:
-            logger.exception("453 Upload failed")
+        except Exception as e:
+            logger.exception(e)
             raise FilesystemError("453 Upload failed")
         finally:
+            logger.debug("Upload finish")
             self._closed = True
-            logger.debug("Uploading file has been closed.")
 
     @property
     def closed(self):

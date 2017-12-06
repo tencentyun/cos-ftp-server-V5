@@ -58,6 +58,7 @@ class StreamUploader(object):
         self._key_name = object_name
 
         if CosFtpConfig().single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
+            logger.error("File size: %d is too big" % CosFtpConfig().single_file_max_size)
             raise ValueError("File size: %d is too big" % CosFtpConfig().single_file_max_size)
 
         self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum));
@@ -94,6 +95,7 @@ class StreamUploader(object):
                 response = self._cos_client.create_multipart_upload(Bucket=self._bucket_name, Key=self._key_name)
                 self._multipart_uploader = MultipartUpload(self._cos_client, response)
                 self._part_num = 1
+                self._isSuccess = None
                 self._has_init = True
 
             def callback(part_num, result):
