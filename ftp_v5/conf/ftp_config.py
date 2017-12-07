@@ -115,6 +115,15 @@ class CosFtpConfig:
             except TypeError:
                 pass
 
+        self.log_level = logging.INFO
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_level"):
+            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("INFO").lower():
+                self.log_level = logging.INFO
+            if str(cfg.get("OPTIONAL","log_level")).lower() == str("DEBUG").lower():
+                self.log_level = logging.DEBUG
+            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("ERROR").lower():
+                self.log_level = logging.ERROR
+
     def __repr__(self):
         return "%s()" % self.__class__.__name__
 
@@ -133,8 +142,9 @@ class CosFtpConfig:
                "min_part_size: %d \n" \
                "upload_thread_num: %d \n" \
                "max_connection_num: %d \n" \
-               "max_list_file: %d " % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num, self.max_list_file)
+               "max_list_file: %d \n" \
+               "log_level: %s " % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num, self.max_list_file, self.log_level)
 
 # unittest
 if __name__ == "__main__":

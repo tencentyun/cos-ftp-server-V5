@@ -25,3 +25,4 @@ min_part_size       = default
 upload_thread_num   = default
 max_connection_num  = 100
 max_list_file       = 10000
+log_level           = DEBUG

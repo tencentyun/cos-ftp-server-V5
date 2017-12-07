@@ -42,7 +42,7 @@ class MockCosWriteFile(object):
             self._uploader.close()
         except Exception as e:
             logger.exception(e)
-            raise FilesystemError("453 Upload failed. File:{0}".format(self._key_name))
+            raise FilesystemError("Upload failed. File:{0}".format(self._key_name))
         finally:
             logger.debug("Upload finish. File:{0}".format(self._key_name))
             self._closed = True
@@ -86,14 +86,14 @@ class CosFileSystem(AbstractedFS):
                 url = self._cos_client.get_presigned_download_url(Bucket=self._bucket_name, Key=key_name)
                 fd = urllib.urlopen(url)
             except CosClientError as e:
-                logger.exception(e)
-                raise FilesystemError("455 Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
+                logger.exception("File path: " + ftp_path, e)
+                raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
             except CosServiceError as e:
-                logger.exception(e)
-                raise FilesystemError("555 Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
+                logger.exception("File path: " + ftp_path, e)
+                raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
             except Exception as e:
-                logger.exception(e)
-                raise FilesystemError("455 Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
+                logger.exception("File path: " + ftp_path, e)
+                raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
             return fd
         else:
             return MockCosWriteFile(self, self._bucket_name, key_name)
@@ -110,10 +110,10 @@ class CosFileSystem(AbstractedFS):
                                                         Key=key_name)
             except CosClientError as e:
                 logger.exception(e)
-                raise FilesystemError("456 Failed to retrieve the file {0} attribute information.".format(str(key_name).encode("utf-8")))
+                raise FilesystemError("Failed to retrieve the file {0} attribute information.".format(str(key_name).encode("utf-8")))
             except CosServiceError as e:
                 logger.exception(e)
-                raise FilesystemError("556 Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
+                raise FilesystemError("Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
             except Exception as e:
                 logger.exception(e)
                 raise FilesystemError("Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
@@ -157,13 +157,13 @@ class CosFileSystem(AbstractedFS):
             response = self._cos_client.put_object(Bucket=self._bucket_name, Body="",
                                                     Key=dir_name)
         except CosClientError as e:
-            logger.exception(e)
-            raise FilesystemError("457 Make dir:{0} failed.".format(str(ftp_path).encode("utf-8")))
+            logger.exception("Make dir: " + dir_name + " occurs an exception.", e)
+            raise FilesystemError("Make dir:{0} failed.".format(str(ftp_path).encode("utf-8")))
         except CosServiceError as e:
-            logger.exception(e)
-            raise FilesystemError("557 Make dir:{0} failed.".format(str(ftp_path).encode('utf-8')))
+            logger.exception("Make dir: " + dir_name + " occurs an exception.", e)
+            raise FilesystemError("Make dir:{0} failed.".format(str(ftp_path).encode('utf-8')))
         except Exception as e:
-            logger.exception(e)
+            logger.exception("Make dir:" + dir_name + " occurs an exception.", e)
             raise FilesystemError("Make dir:{0} failed".format(str(ftp_path).encode("utf-8")))
 
         logger.debug("response: {0}".format(str(response).encode("utf-8")))
@@ -189,20 +189,21 @@ class CosFileSystem(AbstractedFS):
                 response = self._cos_client.copy_object(Bucket=self._bucket_name,
                                                         Key=dest_key_name,
                                                         CopySource=copy_source)
+                self._cos_client.delete_object(
+                    Bucket=self._bucket_name,
+                    Key=src_key_name
+                )
             except CosClientError as e:
-                logger.exception(e)
-                raise FilesystemError("458 Rename {0} to {1} failed.".format(str(src).encode("utf-8")), str(dest).encode("utf-8"))
+                logger.exception("Rename " + str(src).encode("utf-8") + " to " + str(dest).encode("utf-8")
+                                 + "occurs an exception.", e)
+                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8")), str(dest).encode("utf-8"))
             except CosServiceError as e:
-                logger.exception(e)
-                raise FilesystemError("558 Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
+                logger.exception("Rename " + str(src).encode("utf-8") + "to" + str(dest).encode("utf-8")
+                                 + "occurs an exception.", e)
+                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
             except Exception as e:
-                logger.exception(e)
+                logger.exception("Rename " + str(src).encode("utf-8")+ "to" + str(dest).encode("utf-8"), e)
                 raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8"),str(dest).encode("utf-8")))
-
-            self._cos_client.delete_object(
-                Bucket=self._bucket_name,
-                Key=src_key_name
-            )
         elif self.isdir(src):
             raise FilesystemError("Directory renaming is not supported")
         else:
@@ -225,7 +226,7 @@ class CosFileSystem(AbstractedFS):
                 dir_path = "/" + common_prefix["Prefix"]
                 dir_name = dir_path[len(self.cwd):].strip("/")
                 if dir_name != "":
-                    list_dir.add( ("dir", 0, None, dir_name) )
+                    list_dir.add(("dir", 0, None, dir_name))
 
         if "Contents" in response and len(response["Contents"]) > 0:
             for key in response["Contents"]:
@@ -277,13 +278,13 @@ class CosFileSystem(AbstractedFS):
                     else:
                         isTruncated = False
                 except CosClientError as e:
-                    logger.exception(e)
-                    raise FilesystemError("459 list dir:{0} failed.".format(ftp_path))
+                    logger.exception("Dir path:" + dir_name, e)
+                    raise FilesystemError("list dir:{0} failed.".format(ftp_path))
                 except CosServiceError as e:
-                    logger.exception(e)
-                    raise FilesystemError("559 list dir:{0} failed.".format(ftp_path))
+                    logger.exception("Dir path:" + dir_name, e)
+                    raise FilesystemError("list dir:{0} failed.".format(ftp_path))
                 except Exception as e:
-                    logger.exception(e)
+                    logger.exception("Dir path:" + dir_name, e)
                     raise FilesystemError("list dir:{0} failed.".format(ftp_path))
 
             return list_name
@@ -306,13 +307,13 @@ class CosFileSystem(AbstractedFS):
                     else:
                         isTruncated = False
                 except CosClientError as e:
-                    logger.exception(e)
-                    raise FilesystemError("459 list dir:{0} failed.".format(ftp_path))
+                    logger.exception("Dir path:" + dir_name, e)
+                    raise FilesystemError("list dir:{0} failed.".format(ftp_path))
                 except CosServiceError as e:
-                    logger.exception(e)
-                    raise FilesystemError("559 list dir:{0} failed.".format(ftp_path))
+                    logger.exception("Dir path:" + dir_name, e)
+                    raise FilesystemError("list dir:{0} failed.".format(ftp_path))
                 except Exception as e:
-                    logger.exception(e)
+                    logger.exception("Dir path:" + dir_name, e)
                     raise FilesystemError("list dir:{0} failed.".format(ftp_path))
             return list_name
 
@@ -331,7 +332,7 @@ class CosFileSystem(AbstractedFS):
                                                          Delimiter="/")
                 if "Contents" in response:
                     return True
-                else:
+                else:                                                                                   
                     return False
             except CosException:
                 logger.error("Exception: {0}".format(str(CosException.message).encode("utf-8")))
@@ -397,13 +398,13 @@ class CosFileSystem(AbstractedFS):
             try:
                 response = self._cos_client.delete_object(Bucket=self._bucket_name, Key=key_name)
             except CosClientError as e:
-                logger.exception(e)
-                raise FilesystemError("460 Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
+                logger.exception("File name: " + key_name, e)
+                raise FilesystemError("Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
             except CosServiceError as e:
-                logger.exception(e)
-                raise FilesystemError("560 Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
+                logger.exception("File name:" + key_name, e)
+                raise FilesystemError("Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
             except Exception as e:
-                logger.exception(e)
+                logger.exception("File name:" + key_name, e)
                 raise FilesystemError("Remove file:{0} occurs error.".format(str(path).encode("utf-8")))
             logger.debug("response: {0}".format(str(response).encode("utf-8")))
 
