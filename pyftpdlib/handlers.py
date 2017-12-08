@@ -881,7 +881,7 @@ class DTPHandler(AsyncChat):
             AsyncChat.close(self)
 
             # Close file object before responding successfully to client
-            if self.file_obj is not None and not self.file_obj.closed:
+            if self.file_obj is not None:
                 self.file_obj.close()
 
             if self._resp:
