@@ -10,7 +10,7 @@ from ftp_v5.cos_ftp_handler import CosFtpHandler
 from ftp_v5.cos_file_system import CosFileSystem
 from ftp_v5.conf.ftp_config import CosFtpConfig
 
-logging.basicConfig(filename='pyftpd.log', level=logging.DEBUG)
+logging.basicConfig(filename='pyftpd.log', level=CosFtpConfig().log_level)
 
 
 def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
