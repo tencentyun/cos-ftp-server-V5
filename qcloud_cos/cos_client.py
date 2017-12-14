@@ -1,5 +1,6 @@
 # -*- coding=utf-8
 
+import os
 import requests
 import urllib
 import logging
@@ -13,12 +14,24 @@ from xml2dict import Xml2Dict
 from cos_auth import CosS3Auth
 from cos_exception import CosClientError
 from cos_exception import CosServiceError
+from ftp_v5.conf.ftp_config import CosFtpConfig
+
+log_filename = "cos_v5.log"
+
+if not os.path.exists(CosFtpConfig.log_dir):
+    os.mkdir(CosFtpConfig.log_dir)
+    if str(CosFtpConfig.log_dir).endswith("/"):
+        log_filename = CosFtpConfig.log_dir + log_filename
+    else:
+        log_filename = CosFtpConfig.log_dir + "/" + log_filename
+
+
 
 logging.basicConfig(
                 level=logging.INFO,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                filename='log/cos_v5.log',
+                filename=log_filename,
                 filemode='w')
 
 logger = logging.getLogger(__name__)

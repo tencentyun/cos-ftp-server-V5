@@ -124,6 +124,11 @@ class CosFtpConfig:
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("ERROR").lower():
                 self.log_level = logging.ERROR
 
+        self.log_dir = "log"
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_dir"):
+            self.log_path = str(cfg.get("OPTIONAL", "log_dir")).lower()
+
+
     def __repr__(self):
         return "%s()" % self.__class__.__name__
 
@@ -143,8 +148,12 @@ class CosFtpConfig:
                "upload_thread_num: %d \n" \
                "max_connection_num: %d \n" \
                "max_list_file: %d \n" \
-               "log_level: %s " % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num, self.max_list_file, self.log_level)
+               "log_level: %s \n" \
+               "log_dir: %s" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+                                   self.login_users, self.masquerade_address, self.listen_port,
+                                   self.passive_ports, self.single_file_max_size, self.min_part_size,
+                                   self.upload_thread_num, self.max_connection_num, self.max_list_file, self.log_level,
+                                   self.log_dir)
 
 # unittest
 if __name__ == "__main__":
