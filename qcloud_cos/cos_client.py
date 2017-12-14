@@ -16,20 +16,11 @@ from cos_exception import CosClientError
 from cos_exception import CosServiceError
 from ftp_v5.conf.ftp_config import CosFtpConfig
 
-log_filename = "cos_v5.log"
-
-if not os.path.exists(CosFtpConfig().log_dir):
-    os.mkdir(CosFtpConfig().log_dir)
-    if str(CosFtpConfig().log_dir).endswith("/"):
-        log_filename = CosFtpConfig().log_dir + log_filename
-    else:
-        log_filename = CosFtpConfig().log_dir + "/" + log_filename
-
 logging.basicConfig(
                 level=CosFtpConfig().log_level,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
-                filename=log_filename,
+                filename=CosFtpConfig().log_filename,
                 filemode='w')
 
 logger = logging.getLogger(__name__)

@@ -126,8 +126,15 @@ class CosFtpConfig:
 
         self.log_dir = "log"
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_dir"):
-            self.log_path = str(cfg.get("OPTIONAL", "log_dir")).lower()
+            self.log_dir = str(cfg.get("OPTIONAL", "log_dir")).lower()
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
 
+        self.log_filename = "cos_v5.log"
+        if str(self.log_dir).endswith("/"):
+            self.log_filename = self.log_dir + self.log_filename
+        else:
+            self.log_filename = self.log_dir + "/" + self.log_filename
 
     def __repr__(self):
         return "%s()" % self.__class__.__name__
@@ -149,11 +156,12 @@ class CosFtpConfig:
                "max_connection_num: %d \n" \
                "max_list_file: %d \n" \
                "log_level: %s \n" \
-               "log_dir: %s" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+               "log_dir: %s \n" \
+               "log_filename:%s" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
                                    self.login_users, self.masquerade_address, self.listen_port,
                                    self.passive_ports, self.single_file_max_size, self.min_part_size,
                                    self.upload_thread_num, self.max_connection_num, self.max_list_file, self.log_level,
-                                   self.log_dir)
+                                   self.log_dir, self.log_filename)
 
 # unittest
 if __name__ == "__main__":
