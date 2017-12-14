@@ -18,12 +18,12 @@ from ftp_v5.conf.ftp_config import CosFtpConfig
 
 log_filename = "cos_v5.log"
 
-if not os.path.exists(CosFtpConfig.log_dir):
-    os.mkdir(CosFtpConfig.log_dir)
-    if str(CosFtpConfig.log_dir).endswith("/"):
-        log_filename = CosFtpConfig.log_dir + log_filename
+if not os.path.exists(CosFtpConfig().log_dir):
+    os.mkdir(CosFtpConfig().log_dir)
+    if str(CosFtpConfig().log_dir).endswith("/"):
+        log_filename = CosFtpConfig().log_dir + log_filename
     else:
-        log_filename = CosFtpConfig.log_dir + "/" + log_filename
+        log_filename = CosFtpConfig().log_dir + "/" + log_filename
 
 
 
