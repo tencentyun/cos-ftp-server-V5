@@ -70,7 +70,7 @@ conf/vsftpd.conf.example为Ftp Server工具的配置文件示例，请copy为vsf
 [COS_ACCOUNT]
 cos_secretid = XXXXXX					# secretid和secretkey 可以在以下地址获取：https://console.qcloud.com/capi
 cos_secretkey = XXXXXX
-cos_bucket = {bucket}-{appid}	      # 要操作的bucket，bucket的格式为：bucektname-appid组成。 针对COS V5用户，这里与V5控制台上显示一致
+cos_bucket = {bucket}-{appid}	      # 要操作的bucket，bucket的格式为：bucektname-appid组成。 针对COS V5用户，这里与V5控制台上显示一致。例如：qcloud-12xxxxx
 cos_region = ap-xxx					  # bucket所在的区域，目前支持的区域请参照官方文档【适用于XML API部分】：https://www.qcloud.com/document/product/436/6224
 cos_user_home_dir = /home/cos_ftp/data   # Ftp Server的工作目录
 [FTP_ACCOUNT]
