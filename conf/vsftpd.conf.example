@@ -1,10 +1,10 @@
 [COS_ACCOUNT]
-cos_appid = 12XXXXXX
 cos_secretid = XXXXXX
 cos_secretkey = XXXXXX
-cos_bucket = XXXXX
+cos_bucket = {bucket name}-{appid}
 cos_region = ap-xxx
 cos_user_home_dir = /home/cos_ftp/data
+
 [FTP_ACCOUNT]
 login_users = user1:pass1:RW;user2:pass2:RW
 
@@ -26,4 +26,4 @@ upload_thread_num   = default
 max_connection_num  = 100
 max_list_file       = 10000
 log_level           = DEBUG
-log_dir            = log
+log_dir             = log

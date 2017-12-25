@@ -39,10 +39,23 @@ class CosFtpConfig:
         cfg = ConfigParser.RawConfigParser()
         cfg.read(CosFtpConfig.CONFIG_PATH)
 
-        self.appid = cfg.get("COS_ACCOUNT", "cos_appid")
         self.secretid = cfg.get("COS_ACCOUNT", "cos_secretid")
         self.secretkey = cfg.get("COS_ACCOUNT", "cos_secretkey")
-        self.bucket = cfg.get("COS_ACCOUNT", "cos_bucket")
+
+        if cfg.has_section("COS_ACCOUNT") and cfg.has_option("COS_ACCOUNT", "cos_bucket"):
+            tmp_bucket = cfg.get("COS_ACCOUNT", "cos_bucket")
+            if len(str(tmp_bucket).split("-")) < 2:
+                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
+            try:
+                str_list = str(tmp_bucket).split("-")
+                self.appid = int(str_list[-1])                      # 目前，这里的appid必须为一个number
+                del str_list[-1]
+                self.bucket = "-".join(str_list)
+            except TypeError:
+                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
+            except ValueError:
+                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
+
         self.region = cfg.get("COS_ACCOUNT", "cos_region")
         self.homedir = cfg.get("COS_ACCOUNT", "cos_user_home_dir")
 
@@ -119,7 +132,7 @@ class CosFtpConfig:
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_level"):
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("INFO").lower():
                 self.log_level = logging.INFO
-            if str(cfg.get("OPTIONAL","log_level")).lower() == str("DEBUG").lower():
+            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("DEBUG").lower():
                 self.log_level = logging.DEBUG
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("ERROR").lower():
                 self.log_level = logging.ERROR
@@ -157,11 +170,9 @@ class CosFtpConfig:
                "max_list_file: %d \n" \
                "log_level: %s \n" \
                "log_dir: %s \n" \
-               "log_filename:%s" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                   self.login_users, self.masquerade_address, self.listen_port,
-                                   self.passive_ports, self.single_file_max_size, self.min_part_size,
-                                   self.upload_thread_num, self.max_connection_num, self.max_list_file, self.log_level,
-                                   self.log_dir, self.log_filename)
+               "log_file_name: %s \n" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
+                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num,
+                                       self.max_list_file, self.log_level, self.log_dir, self.log_filename)
 
 # unittest
 if __name__ == "__main__":
