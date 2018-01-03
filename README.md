@@ -12,8 +12,8 @@ Python解释器版本：Python 2.7
 
 依赖库：
 
-- cos-python-sdk-v5(included)，requests（not included）， argparse（not included）
-- pyftpdlib(included)
+- requests
+- argparse
 
 ### 安装方法
 
