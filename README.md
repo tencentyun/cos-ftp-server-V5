@@ -91,6 +91,9 @@ single_file_max_size = 21474836480
 min_part_size       = default
 upload_thread_num   = default
 max_connection_num  = 512
+max_list_file       = 10000                # ls命令最大可列出的文件数目，建议不要设置太大，否则ls命令延时会很高
+log_level           = INFO                 # 设置日志输出的级别
+log_dir             = log                  # 设置日志的存放目录，默认是在ftp server目录下的log目录中
 
 ```
 
