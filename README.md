@@ -56,6 +56,7 @@ python setup.py install   # 这里可能需要sudo或者root权限
 - size
 
 ## 不支持FTP命令
+
 - append
 - mget (不支持原生的mget命令，但在某些Windows客户端下，仍然可以批量下载，如FileZilla)
 
@@ -107,3 +108,22 @@ log_dir             = log                  # 设置日志的存放目录，默�
 ## 停止
 
 Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台运行）
+
+## FAQ
+
+**配置文件中的masquerade_address这个选项有何作用？何时需要配置masquerade_address**
+
+答：当FTP Server运行在一个多网卡的Server，并且FTP Server采用了PASSIVE模式（一般地，FTP客户端位于一个NAT网关之后时，都需要启用PASSIVE模式），此时需要使用masquerade_address选项来唯一绑定一个passive模式下用于reply的IP。
+例如，FTP Server有多个IP地址，如内网IP为10.XXX.XXX.XXX，外网IP为123.XXX.XXX.XXX。 客户端通过外网IP连接到FTP Server，同时客户端使用的是PASSIVE模式传输，此时，若FTP Server未指定masquerade_address具体绑定到外网IP地址，则Server在passive模式下，reply时，有可能会走内网地址。就会出现客户端能连接上Ftp server，但是不能从Server端获取任何数据回复。
+
+如果需要配置masquerade_address，建议指定为客户端连接Server所使用的那个IP地址。
+
+**上传大文件的时候，如果中途取消，为什么COS上会留有已上传的文件**
+
+答：由于新版的Ftp Server提供了完全的流式上传特性，如果用户的取消或者断开，都会触发大文件的上传完成操作，因此，COS会认为用户已经数据流上传完成，就会将已经上传的数据组成一个完整的文件。 如果，用户希望重新上传，可以直接以原文件名上传覆盖即可。也可以手动删除不完整的文件，重新上传。
+
+**为什么Ftp Server配置中要设置最大上传文件的限制？**
+答：由于COS的分片上传数目最大只能为10000块，且每个分片的大小限制为1MB ~ 5G。 这里设置最大上传文件的限制是为了合理计算一个上传分片的大小。默认支持200G以内的单文件上传，但是不建议用户设置过大，因为单文件大小设置越大，上传时的分片缓冲区也会相应的增大，这可能会耗费用户的内存资源。因此，建议用户根据自己的实际情况，合理设置单文件的大小限制。
+
+**如果上传的文件超过最大限制，会怎么样？**
+答：当实际上传的单文件大小超过了配置文件中的限制，则会抛出一个IOError的异常，并且在日志中标注错误信息。
