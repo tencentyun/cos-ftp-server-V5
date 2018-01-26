@@ -383,9 +383,9 @@ class CosFileSystem(AbstractedFS):
 
         if self.isdir(path):
             dir_name = self.fs2ftp(path).strip("/") + "/"
-            logger.debug("dir_name:".format(str(dir_name).encode("utf-8")))
+            logger.debug("dir_name:{0}".format(str(dir_name).encode("utf-8")))
             response = self._cos_client.delete_object(Bucket=self._bucket_name, Key=dir_name)
-            logger.debug("response:".format(str(response).encode("utf-8")))
+            logger.debug("response:{0}".format(str(response).encode("utf-8")))
 
     def remove(self, path):
         logger.info("user invoke remove for {0}".format(str(path).encode("utf-8")))
