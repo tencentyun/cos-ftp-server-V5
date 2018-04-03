@@ -15,10 +15,10 @@ class CosFtpConfig:
     CONFIG_PATH = None
     if platform.system() == "Windows":
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                      "\\conf\\vsftpd.conf.example"
+                      "\\conf\\vsftpd.conf"
     else:
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                      "/conf/vsftpd.conf.example"
+                      "/conf/vsftpd.conf"
 
     @classmethod
     def _check_ipv4(cls, ipv4):
@@ -157,6 +157,7 @@ class CosFtpConfig:
         :param homedir:
         :return: 登录用户的信息
         '''
+
         return self.all_COS_UserInfo_Map.get(homedir, None)
 
     def __repr__(self):

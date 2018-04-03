@@ -55,7 +55,6 @@ class MockCosWriteFile(object):
 class CosFileSystem(AbstractedFS):
     def __init__(self, *args, **kwargs):
         super(CosFileSystem, self).__init__(*args, **kwargs)
-
         self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().get_user_info(self.root)['appid'],
                                                  Region=CosFtpConfig().get_user_info(self.root)['cos_region'],
                                                  Access_id=CosFtpConfig().get_user_info(self.root)["cos_secretid"],
