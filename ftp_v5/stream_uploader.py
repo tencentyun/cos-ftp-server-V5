@@ -134,7 +134,7 @@ class StreamUploader(object):
                 time.sleep(10 / 1000)                                        # 休眠10毫秒
 
     def close(self):
-        logger.info("Closing the stream upload... File: %s, Thread:%s".format(self._key_name, threading.currentThread()))
+        logger.info("Closing the stream upload... File: {}, Thread: {}".format(self._key_name, threading.currentThread()))
 
         if self._buffer_len != 0:
             if not self._has_init:

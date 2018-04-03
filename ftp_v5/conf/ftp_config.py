@@ -12,14 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 class CosFtpConfig:
-
     CONFIG_PATH = None
     if platform.system() == "Windows":
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                                      "\\conf\\vsftpd.conf"
+                      "\\conf\\vsftpd.conf.example"
     else:
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                                      "/conf/vsftpd.conf"
+                      "/conf/vsftpd.conf.example"
 
     @classmethod
     def _check_ipv4(cls, ipv4):
@@ -39,43 +38,44 @@ class CosFtpConfig:
         cfg = ConfigParser.RawConfigParser()
         cfg.read(CosFtpConfig.CONFIG_PATH)
 
-        self.secretid = cfg.get("COS_ACCOUNT", "cos_secretid")
-        self.secretkey = cfg.get("COS_ACCOUNT", "cos_secretkey")
+        sections = cfg.sections()  # 获取所有的sections
 
-        if cfg.has_section("COS_ACCOUNT") and cfg.has_option("COS_ACCOUNT", "cos_bucket"):
-            tmp_bucket = cfg.get("COS_ACCOUNT", "cos_bucket")
-            if len(str(tmp_bucket).split("-")) < 2:
-                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
-            try:
-                str_list = str(tmp_bucket).split("-")
-                self.appid = int(str_list[-1])                      # 目前，这里的appid必须为一个number
-                del str_list[-1]
-                self.bucket = "-".join(str_list)
-            except TypeError:
-                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
-            except ValueError:
-                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
-
-        self.region = cfg.get("COS_ACCOUNT", "cos_region")
-        self.homedir = cfg.get("COS_ACCOUNT", "cos_user_home_dir")
-
-        login_users = cfg.get("FTP_ACCOUNT", "login_users")
-        login_users = login_users.strip(" ").split(";")
+        self.all_COS_UserInfo_Map = dict()
         self.login_users = list()
-        # self.login_users 的结构为 [ (user1,pass1,RW), (user2,pass2,RW) ]
-        for element in login_users:
-            login_user = element.split(":")
-            self.login_users.append(tuple(login_user))
+        for section in sections:
+            if str(section).startswith("COS_ACCOUNT"):
+                user_info = dict()
+                user_info['cos_secretid'] = cfg.get(section, "cos_secretid")
+                user_info['cos_secretkey'] = cfg.get(section, "cos_secretkey")
+                cos_v5_bucket = str(cfg.get(section, 'cos_bucket')).split('-')
+                if len(cos_v5_bucket) < 2:
+                    raise ValueError("Config error: bucket option must be {bucket name}-{appid} in section:" + section)
+                try:
+                    user_info['appid'] = int(cos_v5_bucket[-1])
+                    del cos_v5_bucket[-1]
+                    user_info['bucket'] = '-'.join(cos_v5_bucket)
+                except TypeError:
+                    raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
+                except ValueError:
+                    raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
+                user_info['cos_region'] = cfg.get(section, "cos_region")
+                home_dir = cfg.get(section, "home_dir")
+                login_username = cfg.get(section, "ftp_login_user_name")
+                login_password = cfg.get(section, "ftp_login_user_password")
+                authority = cfg.get(section, "authority")
+                self.login_users.append((login_username, login_password, home_dir, authority))
+                self.all_COS_UserInfo_Map[home_dir] = user_info
 
         self.masquerade_address = None
-        if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "masquerade_address") and str(cfg.get("NETWORK", "masquerade_address")) != "":
+        if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "masquerade_address") and str(
+                cfg.get("NETWORK", "masquerade_address")) != "":
             if CosFtpConfig._check_ipv4(cfg.get("NETWORK", "masquerade_address")):
                 self.masquerade_address = cfg.get("NETWORK", "masquerade_address")
         else:
             self.masquerade_address = None
 
         self.listen_port = int(cfg.get("NETWORK", "listen_port"))
-        passive_ports =cfg.get("NETWORK", 'passive_port').split(',')
+        passive_ports = cfg.get("NETWORK", 'passive_port').split(',')
         if len(passive_ports) > 1:
             self.passive_ports = range(int(passive_ports[0]), int(passive_ports[1]))
         elif len(passive_ports) == 1:
@@ -86,12 +86,13 @@ class CosFtpConfig:
         if cfg.has_section("FILE_OPTION") and cfg.has_option("FILE_OPTION", "single_file_max_size"):
             self.single_file_max_size = int(cfg.get("FILE_OPTION", "single_file_max_size"))
         else:
-            self.single_file_max_size = 200 * ftp_v5.conf.common_config.GIGABYTE                            # 默认单文件最大为200G
+            self.single_file_max_size = 200 * ftp_v5.conf.common_config.GIGABYTE  # 默认单文件最大为200G
 
         self.min_part_size = 2 * ftp_v5.conf.common_config.MEGABYTE
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "min_part_size"):
             try:
-                if int(cfg.get("OPTIONAL","min_part_size")) > 0 and int(cfg.get("OPTIONAL", "min_part_size")) < 5 * ftp_v5.conf.common_config.GIGABYTE:
+                if int(cfg.get("OPTIONAL", "min_part_size")) > 0 and int(
+                        cfg.get("OPTIONAL", "min_part_size")) < 5 * ftp_v5.conf.common_config.GIGABYTE:
                     self.min_part_size = int(cfg.get("OPTIONAL", "min_part_size"))
             except ValueError:
                 pass
@@ -101,7 +102,8 @@ class CosFtpConfig:
         self.upload_thread_num = cpu_count() * 4
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "upload_thread_num"):
             try:
-                if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(cfg.get("OPTIONAL", "upload_thread_num")) <= cpu_count() * 8:
+                if int(cfg.get("OPTIONAL", "upload_thread_num")) > 0 and int(
+                        cfg.get("OPTIONAL", "upload_thread_num")) <= cpu_count() * 8:
                     self.upload_thread_num = int(cfg.get("OPTIONAL", "upload_thread_num"))
             except ValueError:
                 pass
@@ -149,17 +151,20 @@ class CosFtpConfig:
         else:
             self.log_filename = self.log_dir + "/" + self.log_filename
 
+    def get_user_info(self, homedir):
+        '''
+        每个用户一个工作目录
+        :param homedir:
+        :return: 登录用户的信息
+        '''
+        return self.all_COS_UserInfo_Map.get(homedir, None)
+
     def __repr__(self):
         return "%s()" % self.__class__.__name__
 
     def __str__(self):
-        return "appid: %s \n" \
-               "secretid: %s \n" \
-               "secretekey: %s \n" \
-               "bucket: %s \n" \
-               "region: %s \n" \
-               "homedir:%s \n" \
-               "login_users: %s \n" \
+        return "user_info: %s \n" \
+                "user_list: %s \n" \
                "masquerade_address: %s \n" \
                "listen_port: %d \n" \
                "passive_ports: %s \n" \
@@ -170,13 +175,14 @@ class CosFtpConfig:
                "max_list_file: %d \n" \
                "log_level: %s \n" \
                "log_dir: %s \n" \
-               "log_file_name: %s \n" % (self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                                       self.login_users, self.masquerade_address, self.listen_port, self.passive_ports, self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num,
-                                       self.max_list_file, self.log_level, self.log_dir, self.log_filename)
+               "log_file_name: %s \n" % (
+                   self.all_COS_UserInfo_Map, self.login_users, self.masquerade_address, self.listen_port, self.passive_ports,
+                   self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num,
+                   self.max_list_file, self.log_level, self.log_dir, self.log_filename)
+
 
 # unittest
 if __name__ == "__main__":
-
     print CosFtpConfig.CONFIG_PATH
 
     print CosFtpConfig()
