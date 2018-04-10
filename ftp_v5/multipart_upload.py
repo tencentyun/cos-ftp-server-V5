@@ -8,7 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class MultipartUpload(object):
-
     MaxiumPartNum = 10000
 
     ResponseDataParser = (
@@ -39,7 +38,7 @@ class MultipartUpload(object):
                 Body=content
             )
         except Exception as e:
-            logger.exception(e)
+            logger.exception("upload part_num:{0} occurs an exception.".format(str(part_num).encode("utf-8")))
             if callback is not None:
                 callback(part_num, False)               # 如果上传成功，需要回调通知
                 raise e
@@ -64,9 +63,15 @@ class MultipartUpload(object):
                                                                        UploadId=self._upload_id,
                                                                        MultipartUpload=self._multipart_upload)
         except CosException as e:
-            logger.exception(e)
-            logger.error("Complete upload failed. File:{0} Thread:{1}".format(self._key_name, threading.currentThread().getName()))
+            logger.exception("Complete multipart upload occurs a CosException. "
+                             "File:{0}, UploadId:{1}. Thread:{2}".format(str(self._key_name).encode("utf-8"),
+                                                                               str(self._upload_id).encode("utf-8"),
+                                                                               str(threading.current_thread().getName()).encode("utf-8")))
             raise e
         except Exception as e:
-            logger.exception(e)
+            logger.exception("Complete multipart upload occurs a exception. "
+                             "File:{0}, UploadId:{1}. Thread:{2}".format(str(self._key_name).encode("utf-8"),
+                                                                               str(self._upload_id).encode("utf-8"),
+                                                                               str(threading.current_thread().getName()).encode("utf-8")))
             logger.error("Complete upload failed. File:{0} Thread:{1}".format(self._key_name, threading.currentThread().getName()))
+            raise e
