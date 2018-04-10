@@ -160,3 +160,8 @@ Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台�
 **如果上传的文件超过最大限制，会怎么样？**
 
 答：当实际上传的单文件大小超过了配置文件中的限制，则会抛出一个IOError的异常，并且在日志中标注错误信息。
+
+
+## 离线安装包
+
+针对某些VPC网络用户，我们将所有依赖打包成了一个离线包供用户直接使用：[cos-ftp-server-V5-MultiBucket-Support](http://cos-tools-offline-1253960454.cosgz.myqcloud.com/cos-ftp-server-V5-Multibucket-Support.tar.gz)
