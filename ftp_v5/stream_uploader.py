@@ -78,7 +78,6 @@ class StreamUploader(object):
         self._upload_pool = None                                                    # 用于并发上传的线程池子
 
     def write(self, data):
-        logger.debug("Receive string with length : {0}  Thread: {1}".format(len(data), threading.currentThread().getName()))
 
         self._buffer.write(data)
         self._buffer_len += len(data)
