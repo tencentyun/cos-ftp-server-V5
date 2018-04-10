@@ -39,7 +39,6 @@ class MultipartUpload(object):
                 Body=content
             )
         except Exception as e:
-            logger.exception(e)
             if callback is not None:
                 callback(part_num, False)               # 如果上传成功，需要回调通知
                 raise e
@@ -64,9 +63,7 @@ class MultipartUpload(object):
                                                                        UploadId=self._upload_id,
                                                                        MultipartUpload=self._multipart_upload)
         except CosException as e:
-            logger.exception(e)
             logger.error("Complete upload failed. File:{0} Thread:{1}".format(self._key_name, threading.currentThread().getName()))
             raise e
         except Exception as e:
-            logger.exception(e)
             logger.error("Complete upload failed. File:{0} Thread:{1}".format(self._key_name, threading.currentThread().getName()))
