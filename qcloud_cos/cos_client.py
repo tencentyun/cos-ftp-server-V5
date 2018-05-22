@@ -88,6 +88,7 @@ def xml_to_dict(data):
     xmlstr = str(xmldict)
     xmlstr = xmlstr.replace("{http://www.qcloud.com/document/product/436/7751}", "")
     xmlstr = xmlstr.replace("{http://www.w3.org/2001/XMLSchema-instance}", "")
+    xmlstr = xmlstr.replace("{http://s3.amazonaws.com/doc/2006-03-01/}", "")
     xmldict = eval(xmlstr)
     return xmldict
 
