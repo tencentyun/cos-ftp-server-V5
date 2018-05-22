@@ -41,7 +41,8 @@ class MockCosWriteFile(object):
         try:
             self._uploader.close()
         except Exception as e:
-            logger.exception("close the uploader occurs an exception. File: {0}".format(str(self._key_name).encode("utf-8")))
+            logger.exception(
+                "close the uploader occurs an exception. File: {0}".format(str(self._key_name).encode("utf-8")))
             raise FilesystemError("Upload failed. File:{0}".format(self._key_name))
         finally:
             logger.debug("Upload finish. File:{0}".format(self._key_name))
@@ -55,17 +56,25 @@ class MockCosWriteFile(object):
 class CosFileSystem(AbstractedFS):
     def __init__(self, *args, **kwargs):
         super(CosFileSystem, self).__init__(*args, **kwargs)
-        self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
-                                                 Region=CosFtpConfig().region,
-                                                 Access_id=CosFtpConfig().secretid,
-                                                 Access_key=CosFtpConfig().secretkey), retry=3)
+        if CosFtpConfig().host is not None:
+            self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
+                                                     Region=None,
+                                                     Access_id=CosFtpConfig().secretid,
+                                                     Access_key=CosFtpConfig().secretkey,
+                                                     Host=CosFtpConfig().host), retry=3)
+        else:
+            self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
+                                                     Region=CosFtpConfig().region,
+                                                     Access_id=CosFtpConfig().secretid,
+                                                     Access_key=CosFtpConfig().secretkey,
+                                                     Host=None), retry=3)
         self._bucket_name = CosFtpConfig().bucket
 
     @property
     def client(self):
         return self._cos_client
 
-    def realpath(self, path):                                                                           # 根目录在哪里？
+    def realpath(self, path):  # 根目录在哪里？
         return path
 
     def open(self, filename, mode):
@@ -78,7 +87,7 @@ class CosFileSystem(AbstractedFS):
 
         ftp_path = self.fs2ftp(filename)
         logger.debug("ftp_path: {0}".format(str(ftp_path).encode("utf-8")))
-        key_name = ftp_path[1:]                 # 去除头部的"/"
+        key_name = ftp_path[1:]  # 去除头部的"/"
         logger.debug("key_name: {0}".format(str(key_name)))
 
         if 'r' in mode:
@@ -101,7 +110,7 @@ class CosFileSystem(AbstractedFS):
     def getsize(self, path):
         logger.info("User invoke getsize to {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(path).encode("utf-8")))
-        assert isinstance(path,unicode), path
+        assert isinstance(path, unicode), path
 
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")
@@ -110,13 +119,16 @@ class CosFileSystem(AbstractedFS):
                                                         Key=key_name)
             except CosClientError as e:
                 logger.exception("Get File:{0} size".format(str(key_name).encode("utf-8")))
-                raise FilesystemError("Failed to retrieve the file {0} attribute information.".format(str(key_name).encode("utf-8")))
+                raise FilesystemError(
+                    "Failed to retrieve the file {0} attribute information.".format(str(key_name).encode("utf-8")))
             except CosServiceError as e:
                 logger.exception("Get File:{0} size".format(str(key_name).encode("utf-8")))
-                raise FilesystemError("Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
+                raise FilesystemError(
+                    "Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
             except Exception as e:
                 logger.exception("Get File:{0} size".format(str(key_name).encode("utf-8")))
-                raise FilesystemError("Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
+                raise FilesystemError(
+                    "Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
             return int(response["Content-Length"])
         elif self.isdir(path):
             return 0
@@ -155,7 +167,7 @@ class CosFileSystem(AbstractedFS):
 
         try:
             response = self._cos_client.put_object(Bucket=self._bucket_name, Body="",
-                                                    Key=dir_name)
+                                                   Key=dir_name)
         except CosClientError as e:
             logger.exception("Make dir: {0} occurs an CosClientError.".format(str(dir_name).encode("utf-8")))
             raise FilesystemError("Make dir:{0} failed.".format(str(ftp_path).encode("utf-8")))
@@ -178,12 +190,12 @@ class CosFileSystem(AbstractedFS):
             return
 
         if self.isfile(src):
-            src_key_name = self.fs2ftp(src)[1:]             # 去除头部的/
-            dest_key_name = self.fs2ftp(dest)[1:]           # 去除头部的/
+            src_key_name = self.fs2ftp(src)[1:]  # 去除头部的/
+            dest_key_name = self.fs2ftp(dest)[1:]  # 去除头部的/
 
             copy_source = dict()
             copy_source["Bucket"] = self._bucket_name
-            copy_source["Key"] = src_key_name               # XXX 该不该带斜线
+            copy_source["Key"] = src_key_name  # XXX 该不该带斜线
 
             try:
                 response = self._cos_client.copy_object(Bucket=self._bucket_name,
@@ -196,14 +208,18 @@ class CosFileSystem(AbstractedFS):
             except CosClientError as e:
                 logger.exception("Rename " + str(src).encode("utf-8") + " to " + str(dest).encode("utf-8")
                                  + "occurs an CosClientError.")
-                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8")), str(dest).encode("utf-8"))
+                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8")),
+                                      str(dest).encode("utf-8"))
             except CosServiceError as e:
                 logger.exception("Rename " + str(src).encode("utf-8") + "to" + str(dest).encode("utf-8")
                                  + "occurs an CosServiceError.")
-                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
+                raise FilesystemError(
+                    "Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
             except Exception as e:
-                logger.exception("Rename " + str(src).encode("utf-8")+ "to" + str(dest).encode("utf-8") + "occurs an exception.")
-                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8"),str(dest).encode("utf-8")))
+                logger.exception(
+                    "Rename " + str(src).encode("utf-8") + "to" + str(dest).encode("utf-8") + "occurs an exception.")
+                raise FilesystemError(
+                    "Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
         elif self.isdir(src):
             raise FilesystemError("Directory renaming is not supported")
         else:
@@ -221,7 +237,7 @@ class CosFileSystem(AbstractedFS):
             if dir_name != "":
                 list_dir.add(("dir", 0, None, dir_name))
 
-        if "CommonPrefixes" in response and isinstance(response["CommonPrefixes"],list):
+        if "CommonPrefixes" in response and isinstance(response["CommonPrefixes"], list):
             for common_prefix in response["CommonPrefixes"]:
                 dir_path = "/" + common_prefix["Prefix"]
                 dir_name = dir_path[len(self.cwd):].strip("/")
@@ -261,8 +277,8 @@ class CosFileSystem(AbstractedFS):
 
         list_name = list()
         max_list_file = CosFtpConfig().max_list_file
-        if dir_name == "/":                                                     # 如果是根目录
-            isTruncated= True
+        if dir_name == "/":  # 如果是根目录
+            isTruncated = True
             next_marker = str("")
             while isTruncated and max_list_file > 0 and next_marker is not None:
                 try:
@@ -289,15 +305,15 @@ class CosFileSystem(AbstractedFS):
 
             return list_name
 
-        if len(dir_name.split("/")) >= 2:                                       # 二级以上目录
+        if len(dir_name.split("/")) >= 2:  # 二级以上目录
             isTruncated = True
             next_marker = str("")
             while isTruncated and max_list_file > 0 and next_marker is not None:
                 try:
                     response = self._cos_client.list_objects(Bucket=self._bucket_name,
-                                                            Prefix=(dir_name.strip("/") + "/"),
-                                                            Delimiter="/",
-                                                            Marker=next_marker)
+                                                             Prefix=(dir_name.strip("/") + "/"),
+                                                             Delimiter="/",
+                                                             Marker=next_marker)
                     tmp_list = self._gen_list(response)
                     list_name.extend(tmp_list)
                     max_list_file -= len(tmp_list)
@@ -307,13 +323,16 @@ class CosFileSystem(AbstractedFS):
                     else:
                         isTruncated = False
                 except CosClientError as e:
-                    logger.exception("List dir path: {0} occurs a CosClientError.".format(str(dir_name).encode("utf-8")))
+                    logger.exception(
+                        "List dir path: {0} occurs a CosClientError.".format(str(dir_name).encode("utf-8")))
                     raise FilesystemError("list dir:{0} failed.".format(ftp_path))
                 except CosServiceError as e:
-                    logger.exception("List dir path: {0} occurs a CosServiceError.".format(str(dir_name).encode("utf-8")))
+                    logger.exception(
+                        "List dir path: {0} occurs a CosServiceError.".format(str(dir_name).encode("utf-8")))
                     raise FilesystemError("list dir:{0} failed.".format(ftp_path))
                 except Exception as e:
-                    logger.exception("List dir path: {0} occurs an unknown exception.".format(str(dir_name).encode("utf-8")))
+                    logger.exception(
+                        "List dir path: {0} occurs an unknown exception.".format(str(dir_name).encode("utf-8")))
                     raise FilesystemError("list dir:{0} failed.".format(ftp_path))
             return list_name
 
@@ -328,11 +347,11 @@ class CosFileSystem(AbstractedFS):
 
             try:
                 response = self._cos_client.list_objects(Bucket=self._bucket_name,
-                                                         Prefix=key_name,               # 假设就是个文件
+                                                         Prefix=key_name,  # 假设就是个文件
                                                          Delimiter="/")
                 if "Contents" in response:
                     return True
-                else:                                                                                   
+                else:
                     return False
             except CosException:
                 logger.error("Exception: {0}".format(str(CosException.message).encode("utf-8")))
@@ -344,14 +363,14 @@ class CosFileSystem(AbstractedFS):
     def islink(self, fs_path):
         return False
 
-    def isdir(self, path):                                                                              # xxx
+    def isdir(self, path):  # xxx
         logger.info("User invoke isdir for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(path).encode("utf-8")))
         assert isinstance(path, unicode), path
 
         if path.startswith("/"):
             ftp_path = self.fs2ftp(path)
-            if ftp_path == "/":             # 根目录
+            if ftp_path == "/":  # 根目录
                 return True
 
             try:
@@ -413,7 +432,7 @@ class CosFileSystem(AbstractedFS):
         ftp_path = self.fs2ftp(path)
 
         if ftp_path.startswith("/"):
-            if self.isdir(path) or self.isfile(path):               # 如果路径
+            if self.isdir(path) or self.isfile(path):  # 如果路径
                 return True
             else:
                 return False
@@ -452,5 +471,7 @@ def test():
                                        Access_key=CosFtpConfig().secretkey,
                                        Region=CosFtpConfig().region
                                        ))
+
+
 if __name__ == "__main__":
     test()
