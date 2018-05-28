@@ -3,7 +3,7 @@ cos_secretid = XXXXXX
 cos_secretkey = XXXXXX
 cos_bucket = {bucket name}-{appid}
 cos_region = ap-xxx
-endpoint = cos.iainyu.myqcloud.com
+# endpoint = cos.ap-guangzhou.myqcloud.com
 cos_user_home_dir = /home/cos_ftp/data
 
 [FTP_ACCOUNT]

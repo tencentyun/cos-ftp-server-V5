@@ -73,7 +73,7 @@ cos_secretid = XXXXXX					# secretid和secretkey 可以在以下地址获取：h
 cos_secretkey = XXXXXX
 cos_bucket = {bucket}-{appid}	      # 要操作的bucket，bucket的格式为：bucektname-appid组成。 针对COS V5用户，这里与V5控制台上显示一致。例如：qcloud-12xxxxx
 cos_region = ap-xxx					  # bucket所在的区域，目前支持的区域请参照官方文档【适用于XML API部分】：https://www.qcloud.com/document/product/436/6224
-# endpoint = cos.iainyu.myqcloud.com  # 自定义的endpoint和region不会同时生效，如果指定了自定义的endpoint，则region将无效
+# endpoint = cos.ap-guangzhou.myqcloud.com  # 自定义的endpoint和region不会同时生效，如果指定了自定义的endpoint，则region将无效
 cos_user_home_dir = /home/cos_ftp/data   # Ftp Server的工作目录
 
 [FTP_ACCOUNT]
@@ -95,7 +95,7 @@ min_part_size       = default
 upload_thread_num   = default
 max_connection_num  = 512
 max_list_file       = 10000                # ls命令最大可列出的文件数目，建议不要设置太大，否则ls命令延时会很高
-log_level           = INFO                 # 设置日志输出的级别
+log_level           = INFO                 # 设置日志输出的级别，支持：WARNING、INFO、DEBUG、ERROR、CRITICAL
 log_dir             = log                  # 设置日志的存放目录，默认是在ftp server目录下的log目录中
 
 ```
