@@ -130,12 +130,16 @@ class CosFtpConfig:
 
         self.log_level = logging.INFO
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_level"):
+            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("WARNING").lower():
+                self.log_level = logging.WARN
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("INFO").lower():
                 self.log_level = logging.INFO
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("DEBUG").lower():
                 self.log_level = logging.DEBUG
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("ERROR").lower():
                 self.log_level = logging.ERROR
+            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("CRITICAL").lower():
+                self.log_level = logging.CRITICAL
 
         self.log_dir = "log"
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_dir"):
