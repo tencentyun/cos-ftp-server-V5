@@ -21,7 +21,11 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
             perm = perm + authorizer.read_perms
         if "W" in permission:
             perm = perm + authorizer.write_perms
-        authorizer.add_user(login_user, login_password, CosFtpConfig().homedir, perm=perm)
+        try:
+            authorizer.add_user(login_user, login_password, CosFtpConfig().homedir, perm=perm)
+        except ValueError as e:
+            print "Errors: " + e.message
+            return
 
     handler = CosFtpHandler
     handler.authorizer = authorizer
@@ -34,7 +38,7 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
 
     handler.passive_ports = passive_ports
 
-    server = FTPServer(("0.0.0.0", port), handler)	
+    server = FTPServer(("0.0.0.0", port), handler)
     server.max_cons = CosFtpConfig().max_connection_num
 
     print "starting  ftp server..."
