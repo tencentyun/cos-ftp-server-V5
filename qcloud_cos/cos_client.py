@@ -192,7 +192,7 @@ class CosS3Client(object):
     def send_request(self, method, url, timeout=30, **kwargs):
         if self._conf._token is not None:
             kwargs['headers']['x-cos-security-token'] = self._conf._token
-        kwargs['headers']['User-Agent'] = 'cos-python-sdk-v5'
+        kwargs['headers']['User-Agent'] = 'cos-ftp-server-V1.3'
         try:
             for j in range(self._retry):
                 if method == 'POST':
