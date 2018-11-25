@@ -24,7 +24,7 @@ class MockCosWriteFile(object):
         self._closed = False
         self._file_name = path.basename(filename)
         self._name = self._key_name
-
+        self._isEmpty = True
         self._uploader = StreamUploader(self._file_system.client, self._bucket_name, self._key_name)
 
     @property
@@ -33,11 +33,18 @@ class MockCosWriteFile(object):
 
     def write(self, data):
         self._uploader.write(data)
+        self._isEmpty = False
         print "Recv data_len: %d, file: %s" % (len(data), self._key_name)
         return len(data)
 
     def close(self):
         logger.info("Closing file: {0}".format(self._key_name))
+
+        if self._isEmpty:
+            # 空文件上传
+            self._file_system.client.put_object(Bucket=self._bucket_name,
+                                                Body="",
+                                                Key=self._key_name)
         try:
             self._uploader.close()
         except Exception as e:
