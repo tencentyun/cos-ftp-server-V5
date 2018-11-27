@@ -2,6 +2,7 @@
 
 import datetime
 
+
 def reformat_lm(last_modified, form="object"):
     if last_modified is None:
         dt_modified = datetime.datetime(1970, 1, 1)
