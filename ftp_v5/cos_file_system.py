@@ -234,28 +234,14 @@ class CosFileSystem(AbstractedFS):
             dir_path = "/" + response["CommonPrefixes"]["Prefix"]
             dir_name = dir_path[len(self.cwd):].strip("/")
             if dir_name != "":
-                try:
-                    dir_meta = self._cos_client.head_object(Bucket=self._bucket_name,
-                                                            Key=response["CommonPrefixes"]["Prefix"])
-                    list_dir.add(("dir", 0, dir_meta["Last-Modified"], dir_name))
-                except CosClientError:
-                    list_dir.add("dir", 0, None, dir_name)
-                except CosServiceError:
-                    list_dir.add("dir", 0, None, dir_name)
+                list_dir.add(("dir", 0, None, dir_name))
 
         if "CommonPrefixes" in response and isinstance(response["CommonPrefixes"], list):
             for common_prefix in response["CommonPrefixes"]:
                 dir_path = "/" + common_prefix["Prefix"]
                 dir_name = dir_path[len(self.cwd):].strip("/")
                 if dir_name != "":
-                    try:
-                        dir_meta = self._cos_client.head_object(Bucket=self._bucket_name, Key=common_prefix["Prefix"])
-
-                        list_dir.add(("dir", 0, dir_meta['Last-Modified'], dir_name))
-                    except CosClientError:
-                        list_dir.add(("dir", 0, None, dir_name))
-                    except CosServiceError:
-                        list_dir.add(("dir", 0, None, dir_name))
+                    list_dir.add(("dir", 0, None, dir_name))
 
         if "Contents" in response and len(response["Contents"]) > 0:
             for key in response["Contents"]:
@@ -266,7 +252,7 @@ class CosFileSystem(AbstractedFS):
                     continue
 
                 if key_name.endswith("/"):
-                    list_dir.add(("dir", 0, None, key_name))
+                    list_dir.add(("dir", 0, key['LastModified'], key_name))
                 else:
                     list_key.add(("file", int(key['Size']), key['LastModified'], key_name))
 
