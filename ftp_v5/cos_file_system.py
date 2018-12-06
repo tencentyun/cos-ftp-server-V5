@@ -260,7 +260,7 @@ class CosFileSystem(AbstractedFS):
                     continue
 
                 if key_name.endswith("/"):
-                    list_dir.add(("dir", 0, None, key_name))
+                    list_dir.add(("dir", 0, key['LastModified'], key_name))
                 else:
                     list_key.add(("file", int(key['Size']), key['LastModified'], key_name))
 
