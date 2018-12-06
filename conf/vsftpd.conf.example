@@ -7,6 +7,7 @@ home_dir = /home/user0
 ftp_login_user_name=user0
 ftp_login_user_password=pass0
 authority=RW
+delete_enable=true
 
 [COS_ACCOUNT_1]
 cos_secretid = XXXX
@@ -17,6 +18,7 @@ home_dir = /home/user1
 ftp_login_user_name=user1
 ftp_login_user_password=pass1
 authority=RW
+delete_enable=true
 
 [COS_ACCOUNT_2]
 cos_secretid = XXXX
@@ -27,6 +29,7 @@ home_dir = /home/user2
 ftp_login_user_name=user2
 ftp_login_user_password=pass2
 authority=RW
+delete_enable=true
 
 [NETWORK]
 masquerade_address = XXX.XXX.XXX.XXX

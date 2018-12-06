@@ -1,12 +1,12 @@
 # -*- coding:utf-8 -*-
 
-import os
 import ConfigParser
-import platform
 import logging
-import ftp_v5.conf.common_config
-
+import os
+import platform
 from multiprocessing import cpu_count
+
+import ftp_v5.conf.common_config
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class CosFtpConfig:
     CONFIG_PATH = None
     if platform.system() == "Windows":
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                      "\\conf\\vsftpd.conf"
+                      "\\conf\\vsftpd.conffp"
     else:
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
                       "/conf/vsftpd.conf"
@@ -59,6 +59,11 @@ class CosFtpConfig:
                 except ValueError:
                     raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
                 user_info['cos_region'] = cfg.get(section, "cos_region")
+                if cfg.has_option(section, "delete_enable"):
+                    user_info['delete_enable'] = cfg.getboolean(section, "delete_enable")
+                else:
+                    user_info['delete_enable'] = True
+
                 home_dir = cfg.get(section, "home_dir")
                 login_username = cfg.get(section, "ftp_login_user_name")
                 login_password = cfg.get(section, "ftp_login_user_password")
@@ -165,7 +170,7 @@ class CosFtpConfig:
 
     def __str__(self):
         return "user_info: %s \n" \
-                "user_list: %s \n" \
+               "user_list: %s \n" \
                "masquerade_address: %s \n" \
                "listen_port: %d \n" \
                "passive_ports: %s \n" \
@@ -177,7 +182,8 @@ class CosFtpConfig:
                "log_level: %s \n" \
                "log_dir: %s \n" \
                "log_file_name: %s \n" % (
-                   self.all_COS_UserInfo_Map, self.login_users, self.masquerade_address, self.listen_port, self.passive_ports,
+                   self.all_COS_UserInfo_Map, self.login_users, self.masquerade_address, self.listen_port,
+                   self.passive_ports,
                    self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num,
                    self.max_list_file, self.log_level, self.log_dir, self.log_filename)
 

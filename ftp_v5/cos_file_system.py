@@ -1,17 +1,18 @@
 # -*- coding:utf-8 -*-
 
-from pyftpdlib.filesystems import AbstractedFS, FilesystemError
-from ftp_v5.stream_uploader import StreamUploader
+import logging
+import urllib
 from os import path
+
+from ftp_v5.conf.ftp_config import CosFtpConfig
+from ftp_v5.stream_uploader import StreamUploader
 from ftp_v5.utils import reformat_lm
+from pyftpdlib.filesystems import AbstractedFS, FilesystemError
+from qcloud_cos.cos_client import CosConfig
+from qcloud_cos.cos_client import CosS3Client
+from qcloud_cos.cos_exception import CosClientError
 from qcloud_cos.cos_exception import CosException
 from qcloud_cos.cos_exception import CosServiceError
-from qcloud_cos.cos_exception import CosClientError
-from qcloud_cos.cos_client import CosS3Client
-from qcloud_cos.cos_client import CosConfig
-from ftp_v5.conf.ftp_config import CosFtpConfig
-import urllib
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -412,6 +413,9 @@ class CosFileSystem(AbstractedFS):
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
         assert isinstance(path, unicode), path
 
+        if not CosFtpConfig().get_user_info(self.root)['delete_enable']:
+            raise FilesystemError("Current user is not allowed to delete.")
+
         if self.isdir(path):
             dir_name = self.fs2ftp(path).strip("/") + "/"
             logger.debug("dir_name:{0}".format(str(dir_name).encode("utf-8")))
@@ -422,6 +426,9 @@ class CosFileSystem(AbstractedFS):
         logger.info("user invoke remove for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
         assert isinstance(path, unicode), path
+
+        if not CosFtpConfig().get_user_info(self.root)['delete_enable']:
+            raise FilesystemError("Current user is not allowed to delete.")
 
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")
