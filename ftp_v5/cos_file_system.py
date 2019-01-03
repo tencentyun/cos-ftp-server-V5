@@ -1,17 +1,20 @@
 # -*- coding:utf-8 -*-
 
-from pyftpdlib.filesystems import AbstractedFS, FilesystemError
-from ftp_v5.stream_uploader import StreamUploader
+import logging
+import urllib
 from os import path
-from ftp_v5.utils import reformat_lm
+
+from pyftpdlib.filesystems import AbstractedFS, FilesystemError
+from qcloud_cos.cos_client import CosConfig
+from qcloud_cos.cos_client import CosS3Client
+from qcloud_cos.cos_exception import CosClientError
 from qcloud_cos.cos_exception import CosException
 from qcloud_cos.cos_exception import CosServiceError
-from qcloud_cos.cos_exception import CosClientError
-from qcloud_cos.cos_client import CosS3Client
-from qcloud_cos.cos_client import CosConfig
+
+from ftp_v5 import version
 from ftp_v5.conf.ftp_config import CosFtpConfig
-import urllib
-import logging
+from ftp_v5.stream_uploader import StreamUploader
+from ftp_v5.utils import reformat_lm
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +27,8 @@ class MockCosWriteFile(object):
         self._closed = False
         self._file_name = path.basename(filename)
         self._name = self._key_name
-        self._isEmpty = True
+        self._isEmptyFile = True
+
         self._uploader = StreamUploader(self._file_system.client, self._bucket_name, self._key_name)
 
     @property
@@ -33,19 +37,16 @@ class MockCosWriteFile(object):
 
     def write(self, data):
         self._uploader.write(data)
-        self._isEmpty = False
-        print "Recv data_len: %d, file: %s" % (len(data), self._key_name)
+        self._isEmptyFile = False
         return len(data)
 
     def close(self):
         logger.info("Closing file: {0}".format(self._key_name))
-
-        if self._isEmpty:
-            # 空文件上传
-            self._file_system.client.put_object(Bucket=self._bucket_name,
-                                                Body="",
-                                                Key=self._key_name)
         try:
+            if self._isEmptyFile:
+                self._file_system.client.put_object(Bucket=self._bucket_name,
+                                                    Body="",
+                                                    Key=self._key_name)
             self._uploader.close()
         except Exception as e:
             logger.exception(
@@ -63,19 +64,14 @@ class MockCosWriteFile(object):
 class CosFileSystem(AbstractedFS):
     def __init__(self, *args, **kwargs):
         super(CosFileSystem, self).__init__(*args, **kwargs)
-        if CosFtpConfig().host is not None:
-            self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
-                                                     Region=None,
-                                                     Access_id=CosFtpConfig().secretid,
-                                                     Access_key=CosFtpConfig().secretkey,
-                                                     Host=CosFtpConfig().host), retry=3)
-        else:
-            self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
-                                                     Region=CosFtpConfig().region,
-                                                     Access_id=CosFtpConfig().secretid,
-                                                     Access_key=CosFtpConfig().secretkey,
-                                                     Host=None), retry=3)
-        self._bucket_name = CosFtpConfig().bucket
+        self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().get_user_info(self.root)['appid'],
+                                                 Region=CosFtpConfig().get_user_info(self.root)['cos_region'],
+                                                 Endpoint=CosFtpConfig().get_user_info(self.root)['cos_endpoint'],
+                                                 Access_id=CosFtpConfig().get_user_info(self.root)["cos_secretid"],
+                                                 Access_key=CosFtpConfig().get_user_info(self.root)['cos_secretkey'],
+                                                 UA=version.user_agent),
+                                       retry=3)
+        self._bucket_name = CosFtpConfig().get_user_info(self.root)["bucket"]
 
     @property
     def client(self):
@@ -407,6 +403,9 @@ class CosFileSystem(AbstractedFS):
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
         assert isinstance(path, unicode), path
 
+        if not CosFtpConfig().get_user_info(self.root)['delete_enable']:
+            raise FilesystemError("Current user is not allowed to delete.")
+
         if self.isdir(path):
             dir_name = self.fs2ftp(path).strip("/") + "/"
             logger.debug("dir_name:{0}".format(str(dir_name).encode("utf-8")))
@@ -417,6 +416,9 @@ class CosFileSystem(AbstractedFS):
         logger.info("user invoke remove for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
         assert isinstance(path, unicode), path
+
+        if not CosFtpConfig().get_user_info(self.root)['delete_enable']:
+            raise FilesystemError("Current user is not allowed to delete.")
 
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")

@@ -1,8 +1,8 @@
 # FTP SERVER 工具
 
-COS FTP SERVER 支持通过FTP协议直接操作COS中的对象和目录，包括上传文件、下载文件、删除文件以及创建文件夹等
+COS FTP SERVER 支持通过FTP协议直接操作COS中的对象和目录，包括上传文件、下载文件、删除文件以及创建文件夹等。
 
-## 使用环境
+## 开始使用
 
 ### 系统环境
 
@@ -10,25 +10,57 @@ COS FTP SERVER 支持通过FTP协议直接操作COS中的对象和目录，包�
 
 Python解释器版本：Python 2.7
 
-依赖库：
+依赖包：
 
-- requests
-- argparse
-
-### 安装方法
-
-直接运行cos ftp server目录下的setup.py即可，需要联网安装依赖库。
-
-```
-python setup.py install   # 这里可能需要sudo或者root权限
-```
-
-如果requests和argparse库等依赖已经安装了的话，可以直接运行ftp_server.py启动ftp server
+- cos-python-sdk-v5 (>=1.6.5)
+- pyftpdlib (>=1.5.2)
 
 
 ### 使用限制
 
-适用于COS V5 版本
+适用于COS XML版本
+
+
+### 安装运行
+
+首先，运行setup.py安装ftp server及其相关的依赖库（需要联网）：
+
+```shell
+python setup.py install   # 这里可能需要sudo或者root权限
+```
+
+然后，拷贝conf/vsftpd.conf.example 到 conf/vsftpd.conf，参考**配置文件**章节，正确配置bucket和用户信息；
+
+最后，运行ftp_server.py启动cos-ftp-server：
+
+```shell
+python ftp_server.py
+
+```
+
+也可以使用nohup命令，以后台进程方式启动：
+
+```shell
+nohup python ftp_server.py >> /dev/null 2>&1 &
+
+```
+
+或使用screen命令放入后台运行(需要安装screen工具)：
+
+```
+screen -dmS ftp
+screen -r ftp
+python ftp_server.py
+
+Ctrl+A+D 			# 切回主screen即可
+
+```
+
+### 停止
+
+Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台运行）
+
+`ps -ef | grep `
 
 
 ## 功能说明
@@ -37,11 +69,17 @@ python setup.py install   # 这里可能需要sudo或者root权限
 
 **下载机制**：直接流式返回给客户端
 
-**目录机制**：bucket作为整个FTP SERVER的根目录，bucket下面可以建立若干个子目录
+**目录机制**：bucket作为整个FTP SERVER的根目录，bucket下面可以建立若干个子目录。
 
-**说明**：目前只支持操作一个bucket，后期可能会支持同时操作多个bucket。
+**多bucket绑定<sup>*</sup>**：支持同时绑定多个bucket。
 
-## 支持的FTP Server命令
+**删除操作限制**：在新的ftp-server中可以针对每个ftp用户配置`delete_enable`选项，以标识是否允许该ftp用户删除文件。
+
+
+*：多bucket绑定是通过不同的ftp server工作路径（`home_dir`）来实现，因此，指定不同的bucket和用户信息时必须保证`home_dir`不同。
+
+
+### 支持的FTP Server命令
 
 - put
 - mput
@@ -55,7 +93,7 @@ python setup.py install   # 这里可能需要sudo或者root权限
 - quite
 - size
 
-## 不支持FTP命令
+### 不支持FTP命令
 
 - append
 - mget (不支持原生的mget命令，但在某些Windows客户端下，仍然可以批量下载，如FileZilla)
@@ -68,22 +106,35 @@ python setup.py install   # 这里可能需要sudo或者root权限
 conf/vsftpd.conf.example为Ftp Server工具的配置文件示例，请copy为vsftpd.conf，并按照以下的配置项进行配置：
 
 ``` conf
-[COS_ACCOUNT]
-cos_secretid = XXXXXX					# secretid和secretkey 可以在以下地址获取：https://console.qcloud.com/capi
+[COS_ACCOUNT_0]
+cos_secretid = XXXXXX
 cos_secretkey = XXXXXX
-cos_bucket = {bucket}-{appid}	      # 要操作的bucket，bucket的格式为：bucektname-appid组成。 针对COS V5用户，这里与V5控制台上显示一致。例如：qcloud-12xxxxx
-cos_region = ap-xxx					  # bucket所在的区域，目前支持的区域请参照官方文档【适用于XML API部分】：https://www.qcloud.com/document/product/436/6224
-# endpoint = cos.ap-guangzhou.myqcloud.com  # 自定义的endpoint和region不会同时生效，如果指定了自定义的endpoint，则region将无效
-cos_user_home_dir = /home/cos_ftp/data   # Ftp Server的工作目录
+cos_bucket = {bucket name}-123
+cos_region = ap-xxx
+#cos_endpoint = ap-xxx.myqcloud.com
+home_dir = /home/user0
+ftp_login_user_name=user0
+ftp_login_user_password=pass0
+authority=RW
+delete_enable=true					# true为允许该ftp用户进行删除操作(默认)，false为禁止该用户进行删除操作
 
-[FTP_ACCOUNT]
-login_users = user1:pass1:RW;user2:pass2:RW     # FTP 账户配置。配置格式为“用户名:密码:读写权限”，多个账户用分号分割
+[COS_ACCOUNT_1]
+cos_secretid = XXXX
+cos_secretkey = XXXXX
+cos_bucket = {bucket name}-123
+cos_region = ap-xxx
+#cos_endpoint = ap-xxx.myqcloud.com
+home_dir = /home/user1
+ftp_login_user_name=user1
+ftp_login_user_password=pass1
+authority=RW
+delete_enable=false
 
 [NETWORK]
 masquerade_address = XXX.XXX.XXX.XXX        # 如果FTP SERVER处于某个网关或NAT后，可以通过该配置项将网关的IP地址或域名指定给FTP
 listen_port = 2121					   # Ftp Server的监听端口，默认为2121，注意防火墙需要放行该端口
 
-passive_port = 60000,65535             #passive_port可以设置passive模式下，端口的选择范围，默认在(60000, 65535)区间上选择
+passive_port = 60000,65535             # passive_port可以设置passive模式下，端口的选择范围，默认在(60000, 65535)区间上选择
 
 [FILE_OPTION]
 # 默认单文件大小最大支持到200G，不建议设置太大
@@ -95,21 +146,23 @@ min_part_size       = default
 upload_thread_num   = default
 max_connection_num  = 512
 max_list_file       = 10000                # ls命令最大可列出的文件数目，建议不要设置太大，否则ls命令延时会很高
-log_level           = INFO                 # 设置日志输出的级别，支持：WARNING、INFO、DEBUG、ERROR、CRITICAL
+log_level           = INFO                 # 设置日志输出的级别
 log_dir             = log                  # 设置日志的存放目录，默认是在ftp server目录下的log目录中
 
 ```
 
-上述的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
+如果要将每个用户绑定到不同的bucket上，则只需要添加`[COS_ACCOUNT_X]`的section即可。
+
+针对每个不同的`COS_ACCOUNT_X`的section有如下说明：
+
+1. 每个ACCOUNT下的用户名（`ftp_login_user_name`）和用户的主目录（`home_dir`）必须各不相同，并且主目录必须是系统中真实存在的目录；
+2. 每个COS FTP SERVER允许同时登录的用户数目不能超过100；
+3. `endpoint`和`region`不会同时生效，使用公有云COS服务只需要正确填写`region`字段即可，`endpoint`常用于私有化部署环境中。当同时填写了`region`和`endpoint`，则会`endpoint`会优先生效。
+
+配置文件中的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
 同时，提供最大连接数的限制选项。 这里如果不想限制最大连接数，可以填写0，即表示不限制最大连接数目（不过需要根据您机器的性能合理评估）。
 
-## 运行方法
 
-正确填写配置文件后，直接通过Python运行根目录下的ftp_server.py即可启动FTP SERVER：python ftp_server.py，也可以配合screen的命令将ftp server放到后台运行。
-
-## 停止
-
-Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台运行）
 
 ## FAQ
 
@@ -119,13 +172,6 @@ Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台�
 例如，FTP Server有多个IP地址，如内网IP为10.XXX.XXX.XXX，外网IP为123.XXX.XXX.XXX。 客户端通过外网IP连接到FTP Server，同时客户端使用的是PASSIVE模式传输，此时，若FTP Server未指定masquerade_address具体绑定到外网IP地址，则Server在passive模式下，reply时，有可能会走内网地址。就会出现客户端能连接上Ftp server，但是不能从Server端获取任何数据回复。
 
 如果需要配置masquerade_address，建议指定为客户端连接Server所使用的那个IP地址。
-
-**正确配置了masquerade_address选项以后，ftp server可以正常登陆，但是执行FTP命令：list或者get等数据取回命令时，提示“服务器返回不可路由的地址”或“ftp: connect: No route to host”等错误**
-
-答：这个case多半是因为ftp server机器iptables或防火墙策略配置reject或者drop掉所有ICMP协议包，而FTP客户端在拿到FTP Server被动模式下返回的数据连接IP后，会首先发送一个ICMP包探测IP的连通性，所以客户端会提示“服务器返回不可路由的地址”等错误。
-
-建议解决方案是：将iptables策略按需配置为只reject或drop希望限制的ICMP包类型，如只想禁掉外部ping类型的ICMP包，可以将策略修改为：iptables -A INPUT -p icmp --icmp-type 8 -s 0/0 -j [REJECT/DROP]
-或者单独放开要访问ftp server的客户端的IP。
 
 **上传大文件的时候，如果中途取消，为什么COS上会留有已上传的文件**
 
@@ -140,6 +186,6 @@ Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台�
 答：当实际上传的单文件大小超过了配置文件中的限制，则会抛出一个IOError的异常，并且在日志中标注错误信息。
 
 
-### 离线安装包
+## 离线安装包
 
-针对某些VPC网络用户，我们将所有依赖打包成了一个离线包供用户直接使用：[cos-ftp-server-stable-offline.tar.gz](http://cos-tools-offline-1253960454.cosgz.myqcloud.com/cos-ftp-server-V5-offline-stable.tar.gz)
+针对某些VPC网络用户，我们将所有依赖打包成了一个离线包供用户直接使用：[cos-ftp-server-V5-MultiBucket-Support](http://cos-tools-offline-1253960454.cosgz.myqcloud.com/cos-ftp-server-V5-Multibucket-Support.tar.gz)
