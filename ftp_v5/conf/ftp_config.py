@@ -1,12 +1,12 @@
 # -*- coding:utf-8 -*-
 
-import os
 import ConfigParser
-import platform
 import logging
-import ftp_v5.conf.common_config
-
+import os
+import platform
 from multiprocessing import cpu_count
+
+import ftp_v5.conf.common_config
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class CosFtpConfig:
     CONFIG_PATH = None
     if platform.system() == "Windows":
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                      "\\conf\\vsftpd.conf"
+                      "\\conf\\vsftpd.conf.example"
     else:
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
                       "/conf/vsftpd.conf"
@@ -38,45 +38,46 @@ class CosFtpConfig:
         cfg = ConfigParser.RawConfigParser()
         cfg.read(CosFtpConfig.CONFIG_PATH)
 
-        self.secretid = cfg.get("COS_ACCOUNT", "cos_secretid")
-        self.secretkey = cfg.get("COS_ACCOUNT", "cos_secretkey")
+        sections = cfg.sections()  # 获取所有的sections
 
-        if cfg.has_section("COS_ACCOUNT") and cfg.has_option("COS_ACCOUNT", "cos_bucket"):
-            tmp_bucket = cfg.get("COS_ACCOUNT", "cos_bucket")
-            if len(str(tmp_bucket).split("-")) < 2:
-                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
-            try:
-                str_list = str(tmp_bucket).split("-")
-                self.appid = int(str_list[-1])  # 目前，这里的appid必须为一个number
-                del str_list[-1]
-                self.bucket = "-".join(str_list)
-            except TypeError:
-                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
-            except ValueError:
-                raise ValueError("Config error: bucket field must be {bucket name}-{appid}")
-
-        self.region = None
-        self.host = None
-        if cfg.has_section("COS_ACCOUNT") and \
-                cfg.has_option("COS_ACCOUNT", "cos_region") or cfg.has_option("COS_ACCOUNT", "endpoint"):
-            if cfg.has_option("COS_ACCOUNT", "endpoint"):
-                self.host = cfg.get("COS_ACCOUNT", "endpoint")
-            elif cfg.has_option("COS_ACCOUNT", "cos_region"):
-                self.region = cfg.get("COS_ACCOUNT", "cos_region")
-            else:
-                raise ValueError("Config error: Host and region specify at least one")
-        else:
-            raise ValueError("Config error: Host and region specify at least one")
-
-        self.homedir = cfg.get("COS_ACCOUNT", "cos_user_home_dir")
-
-        login_users = cfg.get("FTP_ACCOUNT", "login_users")
-        login_users = login_users.strip(" ").split(";")
+        self.all_COS_UserInfo_Map = dict()
         self.login_users = list()
-        # self.login_users 的结构为 [ (user1,pass1,RW), (user2,pass2,RW) ]
-        for element in login_users:
-            login_user = element.split(":")
-            self.login_users.append(tuple(login_user))
+        for section in sections:
+            if str(section).startswith("COS_ACCOUNT"):
+                user_info = dict()
+                user_info['cos_secretid'] = cfg.get(section, "cos_secretid")
+                user_info['cos_secretkey'] = cfg.get(section, "cos_secretkey")
+                cos_v5_bucket = str(cfg.get(section, 'cos_bucket')).split('-')
+                if len(cos_v5_bucket) < 2:
+                    raise ValueError("Config error: bucket option must be {bucket name}-{appid} in section:" + section)
+                try:
+                    user_info['appid'] = cos_v5_bucket[-1]
+                    del cos_v5_bucket[-1]
+                    user_info['bucket'] = '-'.join(cos_v5_bucket)
+                except TypeError:
+                    raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
+                except ValueError:
+                    raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
+
+                user_info['cos_region'] = str()
+                user_info['cos_endpoint'] = str()
+                if cfg.has_option(section, "cos_region"):
+                    user_info['cos_region'] = cfg.get(section, "cos_region")
+
+                if cfg.has_option(section, "cos_endpoint"):
+                    user_info['cos_endpoint'] = cfg.get(section, "cos_endpoint")
+
+                if cfg.has_option(section, "delete_enable"):
+                    user_info['delete_enable'] = cfg.getboolean(section, "delete_enable")
+                else:
+                    user_info['delete_enable'] = True
+
+                home_dir = cfg.get(section, "home_dir")
+                login_username = cfg.get(section, "ftp_login_user_name")
+                login_password = cfg.get(section, "ftp_login_user_password")
+                authority = cfg.get(section, "authority")
+                self.login_users.append((login_username, login_password, home_dir, authority))
+                self.all_COS_UserInfo_Map[home_dir] = user_info
 
         self.masquerade_address = None
         if cfg.has_section("NETWORK") and cfg.has_option("NETWORK", "masquerade_address") and str(
@@ -144,16 +145,12 @@ class CosFtpConfig:
 
         self.log_level = logging.INFO
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_level"):
-            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("WARNING").lower():
-                self.log_level = logging.WARN
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("INFO").lower():
                 self.log_level = logging.INFO
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("DEBUG").lower():
                 self.log_level = logging.DEBUG
             if str(cfg.get("OPTIONAL", "log_level")).lower() == str("ERROR").lower():
                 self.log_level = logging.ERROR
-            if str(cfg.get("OPTIONAL", "log_level")).lower() == str("CRITICAL").lower():
-                self.log_level = logging.CRITICAL
 
         self.log_dir = "log"
         if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_dir"):
@@ -167,17 +164,21 @@ class CosFtpConfig:
         else:
             self.log_filename = self.log_dir + "/" + self.log_filename
 
+    def get_user_info(self, homedir):
+        '''
+        每个用户一个工作目录
+        :param homedir:
+        :return: 登录用户的信息
+        '''
+
+        return self.all_COS_UserInfo_Map.get(homedir, None)
+
     def __repr__(self):
         return "%s()" % self.__class__.__name__
 
     def __str__(self):
-        return "appid: %s \n" \
-               "secretid: %s \n" \
-               "secretekey: %s \n" \
-               "bucket: %s \n" \
-               "region: %s \n" \
-               "homedir:%s \n" \
-               "login_users: %s \n" \
+        return "user_info: %s \n" \
+               "user_list: %s \n" \
                "masquerade_address: %s \n" \
                "listen_port: %d \n" \
                "passive_ports: %s \n" \
@@ -188,12 +189,11 @@ class CosFtpConfig:
                "max_list_file: %d \n" \
                "log_level: %s \n" \
                "log_dir: %s \n" \
-               "log_file_name: %s \n" \
-               "host: %s" % (
-                   self.appid, self.secretid, self.secretkey, self.bucket, self.region, self.homedir,
-                   self.login_users, self.masquerade_address, self.listen_port, self.passive_ports,
+               "log_file_name: %s \n" % (
+                   self.all_COS_UserInfo_Map, self.login_users, self.masquerade_address, self.listen_port,
+                   self.passive_ports,
                    self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num,
-                   self.max_list_file, self.log_level, self.log_dir, self.log_filename, self.host)
+                   self.max_list_file, self.log_level, self.log_dir, self.log_filename)
 
 
 # unittest
