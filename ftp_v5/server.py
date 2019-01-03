@@ -3,14 +3,20 @@
 
 import logging
 
-from pyftpdlib.servers import FTPServer, MultiprocessFTPServer
+from pyftpdlib.servers import FTPServer
 
-from ftp_v5.cos_authorizer import CosAuthorizer
-from ftp_v5.cos_ftp_handler import CosFtpHandler
-from ftp_v5.cos_file_system import CosFileSystem
 from ftp_v5.conf.ftp_config import CosFtpConfig
+from ftp_v5.cos_authorizer import CosAuthorizer
+from ftp_v5.cos_file_system import CosFileSystem
+from ftp_v5.cos_ftp_handler import CosFtpHandler
 
-logging.basicConfig(filename='pyftpd.log', level=CosFtpConfig().log_level)
+logging.basicConfig(
+    level=CosFtpConfig().log_level,
+    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
+    datefmt='%a, %d %b %Y %H:%M:%S',
+    filename=CosFtpConfig().log_filename,
+    filemode='w'
+)
 
 
 def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):

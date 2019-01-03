@@ -3,5 +3,5 @@
 
 from ftp_v5 import server
 
-if __name__ =="__main__":
+if __name__ == "__main__":
     server.main()

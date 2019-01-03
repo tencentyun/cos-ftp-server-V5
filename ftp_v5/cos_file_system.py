@@ -4,15 +4,17 @@ import logging
 import urllib
 from os import path
 
-from ftp_v5.conf.ftp_config import CosFtpConfig
-from ftp_v5.stream_uploader import StreamUploader
-from ftp_v5.utils import reformat_lm
 from pyftpdlib.filesystems import AbstractedFS, FilesystemError
 from qcloud_cos.cos_client import CosConfig
 from qcloud_cos.cos_client import CosS3Client
 from qcloud_cos.cos_exception import CosClientError
 from qcloud_cos.cos_exception import CosException
 from qcloud_cos.cos_exception import CosServiceError
+
+from ftp_v5 import version
+from ftp_v5.conf.ftp_config import CosFtpConfig
+from ftp_v5.stream_uploader import StreamUploader
+from ftp_v5.utils import reformat_lm
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +66,10 @@ class CosFileSystem(AbstractedFS):
         super(CosFileSystem, self).__init__(*args, **kwargs)
         self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().get_user_info(self.root)['appid'],
                                                  Region=CosFtpConfig().get_user_info(self.root)['cos_region'],
+                                                 Endpoint=CosFtpConfig().get_user_info(self.root)['cos_endpoint'],
                                                  Access_id=CosFtpConfig().get_user_info(self.root)["cos_secretid"],
-                                                 Access_key=CosFtpConfig().get_user_info(self.root)['cos_secretkey']),
+                                                 Access_key=CosFtpConfig().get_user_info(self.root)['cos_secretkey'],
+                                                 UA=version.user_agent),
                                        retry=3)
         self._bucket_name = CosFtpConfig().get_user_info(self.root)["bucket"]
 

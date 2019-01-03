@@ -15,7 +15,7 @@ class CosFtpConfig:
     CONFIG_PATH = None
     if platform.system() == "Windows":
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
-                      "\\conf\\vsftpd.conffp"
+                      "\\conf\\vsftpd.conf"
     else:
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
                       "/conf/vsftpd.conf"
@@ -51,14 +51,22 @@ class CosFtpConfig:
                 if len(cos_v5_bucket) < 2:
                     raise ValueError("Config error: bucket option must be {bucket name}-{appid} in section:" + section)
                 try:
-                    user_info['appid'] = int(cos_v5_bucket[-1])
+                    user_info['appid'] = cos_v5_bucket[-1]
                     del cos_v5_bucket[-1]
                     user_info['bucket'] = '-'.join(cos_v5_bucket)
                 except TypeError:
                     raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
                 except ValueError:
                     raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
-                user_info['cos_region'] = cfg.get(section, "cos_region")
+                user_info['cos_region'] = str()
+                user_info['cos_endpoint'] = str()
+
+                if cfg.has_option(section, "cos_region"):
+                    user_info['cos_region'] = cfg.get(section, "cos_region")
+
+                if cfg.has_option(section, "cos_endpoint"):
+                    user_info['cos_endpoint'] = cfg.get(section, "cos_endpoint")
+
                 if cfg.has_option(section, "delete_enable"):
                     user_info['delete_enable'] = cfg.getboolean(section, "delete_enable")
                 else:

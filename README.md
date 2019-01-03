@@ -1,10 +1,8 @@
 # FTP SERVER 工具
 
-COS FTP SERVER 支持通过FTP协议直接操作COS中的对象和目录，包括上传文件、下载文件、删除文件以及创建文件夹等.
+COS FTP SERVER 支持通过FTP协议直接操作COS中的对象和目录，包括上传文件、下载文件、删除文件以及创建文件夹等。
 
-**MultiBucket-Support版本**支持配置多个用户绑定不同的bucket (单个FTP Server同时登录的用户数目限制在100个以内）。
-
-## 使用环境
+## 开始使用
 
 ### 系统环境
 
@@ -12,25 +10,57 @@ COS FTP SERVER 支持通过FTP协议直接操作COS中的对象和目录，包�
 
 Python解释器版本：Python 2.7
 
-依赖库：
+依赖包：
 
-- requests
-- argparse
-
-### 安装方法
-
-直接运行cos ftp server目录下的setup.py即可，需要联网安装依赖库。
-
-```
-python setup.py install   # 这里可能需要sudo或者root权限
-```
-
-如果requests和argparse库等依赖已经安装了的话，可以直接运行ftp_server.py启动ftp server
+- cos-python-sdk-v5 (>=1.6.5)
+- pyftpdlib (>=1.5.2)
 
 
 ### 使用限制
 
-适用于COS V5 版本
+适用于COS XML版本
+
+
+### 安装运行
+
+首先，运行setup.py安装ftp server及其相关的依赖库（需要联网）：
+
+```shell
+python setup.py install   # 这里可能需要sudo或者root权限
+```
+
+然后，拷贝conf/vsftpd.conf.example 到 conf/vsftpd.conf，参考**配置文件**章节，正确配置bucket和用户信息；
+
+最后，运行ftp_server.py启动cos-ftp-server：
+
+```shell
+python ftp_server.py
+
+```
+
+也可以使用nohup命令，以后台进程方式启动：
+
+```shell
+nohup python ftp_server.py >> /dev/null 2>&1 &
+
+```
+
+或使用screen命令放入后台运行(需要安装screen工具)：
+
+```
+screen -dmS ftp
+screen -r ftp
+python ftp_server.py
+
+Ctrl+A+D 			# 切回主screen即可
+
+```
+
+### 停止
+
+Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台运行）
+
+`ps -ef | grep `
 
 
 ## 功能说明
@@ -39,11 +69,17 @@ python setup.py install   # 这里可能需要sudo或者root权限
 
 **下载机制**：直接流式返回给客户端
 
-**目录机制**：bucket作为整个FTP SERVER的根目录，bucket下面可以建立若干个子目录
+**目录机制**：bucket作为整个FTP SERVER的根目录，bucket下面可以建立若干个子目录。
 
-**说明**：目前只支持操作一个bucket，后期可能会支持同时操作多个bucket。
+**多bucket绑定<sup>*</sup>**：支持同时绑定多个bucket。
 
-## 支持的FTP Server命令
+**删除操作限制**：在新的ftp-server中可以针对每个ftp用户配置`delete_enable`选项，以标识是否允许该ftp用户删除文件。
+
+
+*：多bucket绑定是通过不同的ftp server工作路径（`home_dir`）来实现，因此，指定不同的bucket和用户信息时必须保证`home_dir`不同。
+
+
+### 支持的FTP Server命令
 
 - put
 - mput
@@ -57,7 +93,7 @@ python setup.py install   # 这里可能需要sudo或者root权限
 - quite
 - size
 
-## 不支持FTP命令
+### 不支持FTP命令
 
 - append
 - mget (不支持原生的mget命令，但在某些Windows客户端下，仍然可以批量下载，如FileZilla)
@@ -75,30 +111,24 @@ cos_secretid = XXXXXX
 cos_secretkey = XXXXXX
 cos_bucket = {bucket name}-123
 cos_region = ap-xxx
+#cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user0
 ftp_login_user_name=user0
 ftp_login_user_password=pass0
 authority=RW
+delete_enable=true					# true为允许该ftp用户进行删除操作(默认)，false为禁止该用户进行删除操作
 
 [COS_ACCOUNT_1]
 cos_secretid = XXXX
 cos_secretkey = XXXXX
 cos_bucket = {bucket name}-123
 cos_region = ap-xxx
+#cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user1
 ftp_login_user_name=user1
 ftp_login_user_password=pass1
 authority=RW
-
-[COS_ACCOUNT_2]
-cos_secretid = XXXX
-cos_secretkey = XXXXX
-cos_bucket = {bucket name}-123
-cos_region = ap-xxx
-home_dir = /home/user2
-ftp_login_user_name=user2
-ftp_login_user_password=pass2
-authority=RW
+delete_enable=false
 
 [NETWORK]
 masquerade_address = XXX.XXX.XXX.XXX        # 如果FTP SERVER处于某个网关或NAT后，可以通过该配置项将网关的IP地址或域名指定给FTP
@@ -121,24 +151,18 @@ log_dir             = log                  # 设置日志的存放目录，默�
 
 ```
 
-如果要将每个用户绑定到不同的bucket上，则只需要添加[COS_ACCOUNT_X]section即可。
+如果要将每个用户绑定到不同的bucket上，则只需要添加`[COS_ACCOUNT_X]`的section即可。
 
-针对每个不同的COS_ACCOUNT_X的section有如下说明：
+针对每个不同的`COS_ACCOUNT_X`的section有如下说明：
 
-1. 每个ACCOUNT的用户名（ftp_login_user_name）和用户的主目录（home_dir）必须各不相同，并且主目录必须是系统中真实存在的目录；
-2. 每个COS FTP SERVER允许同时登录的用户数目不能超过100。
+1. 每个ACCOUNT下的用户名（`ftp_login_user_name`）和用户的主目录（`home_dir`）必须各不相同，并且主目录必须是系统中真实存在的目录；
+2. 每个COS FTP SERVER允许同时登录的用户数目不能超过100；
+3. `endpoint`和`region`不会同时生效，使用公有云COS服务只需要正确填写`region`字段即可，`endpoint`常用于私有化部署环境中。当同时填写了`region`和`endpoint`，则会`endpoint`会优先生效。
 
-
-上述的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
+配置文件中的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
 同时，提供最大连接数的限制选项。 这里如果不想限制最大连接数，可以填写0，即表示不限制最大连接数目（不过需要根据您机器的性能合理评估）。
 
-## 运行方法
 
-正确填写配置文件后，直接通过Python运行根目录下的ftp_server.py即可启动FTP SERVER：python ftp_server.py，也可以配合screen的命令将ftp server放到后台运行。
-
-## 停止
-
-Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台运行）
 
 ## FAQ
 
