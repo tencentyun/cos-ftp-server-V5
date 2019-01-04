@@ -47,17 +47,21 @@ class CosFtpConfig:
                 user_info = dict()
                 user_info['cos_secretid'] = cfg.get(section, "cos_secretid")
                 user_info['cos_secretkey'] = cfg.get(section, "cos_secretkey")
-                cos_v5_bucket = str(cfg.get(section, 'cos_bucket')).split('-')
+                cos_v5_bucket = cfg.get(section, 'cos_bucket')
                 if len(cos_v5_bucket) < 2:
                     raise ValueError("Config error: bucket option must be {bucket name}-{appid} in section:" + section)
                 try:
-                    user_info['appid'] = cos_v5_bucket[-1]
-                    del cos_v5_bucket[-1]
-                    user_info['bucket'] = '-'.join(cos_v5_bucket)
+                    user_info['bucket'] = cos_v5_bucket
+                    user_info['appid'] = str(cos_v5_bucket).split('-')[-1]
                 except TypeError:
                     raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
                 except ValueError:
                     raise ValueError("Config error: bucket failed must be {bucket name}-{appid} in section:" + section)
+
+                user_info['cos_protocol'] = "https"
+
+                if cfg.has_option(section, 'protocol'):
+                    user_info['cos_protocol'] = cfg.get(section, 'cos_protocol')
 
                 user_info['cos_region'] = str()
                 user_info['cos_endpoint'] = str()

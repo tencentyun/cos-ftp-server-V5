@@ -64,9 +64,9 @@ class MockCosWriteFile(object):
 class CosFileSystem(AbstractedFS):
     def __init__(self, *args, **kwargs):
         super(CosFileSystem, self).__init__(*args, **kwargs)
-        self._cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().get_user_info(self.root)['appid'],
-                                                 Region=CosFtpConfig().get_user_info(self.root)['cos_region'],
+        self._cos_client = CosS3Client(CosConfig(Region=CosFtpConfig().get_user_info(self.root)['cos_region'],
                                                  Endpoint=CosFtpConfig().get_user_info(self.root)['cos_endpoint'],
+                                                 Scheme=CosFtpConfig().get_user_info(self.root)['cos_protocol'],
                                                  Access_id=CosFtpConfig().get_user_info(self.root)["cos_secretid"],
                                                  Access_key=CosFtpConfig().get_user_info(self.root)['cos_secretkey'],
                                                  UA=version.user_agent),
@@ -200,11 +200,14 @@ class CosFileSystem(AbstractedFS):
             copy_source = dict()
             copy_source["Bucket"] = self._bucket_name
             copy_source["Key"] = src_key_name  # XXX 该不该带斜线
+            copy_source['Region'] = CosFtpConfig().get_user_info(self.root)['cos_region']
+            copy_source['Endpoint'] = CosFtpConfig().get_user_info(self.root)['cos_endpoint']
 
             try:
                 response = self._cos_client.copy_object(Bucket=self._bucket_name,
                                                         Key=dest_key_name,
-                                                        CopySource=copy_source)
+                                                        CopySource=copy_source,
+                                                        CopyStatus='Copy')
                 self._cos_client.delete_object(
                     Bucket=self._bucket_name,
                     Key=src_key_name
