@@ -25,7 +25,7 @@ Python解释器版本：Python 2.7
 
 首先，运行setup.py安装ftp server及其相关的依赖库（需要联网）：
 
-```shell
+```bash
 python setup.py install   # 这里可能需要sudo或者root权限
 ```
 
@@ -33,21 +33,19 @@ python setup.py install   # 这里可能需要sudo或者root权限
 
 最后，运行ftp_server.py启动cos-ftp-server：
 
-```shell
+```bash
 python ftp_server.py
-
 ```
 
 也可以使用nohup命令，以后台进程方式启动：
 
-```shell
+```bash
 nohup python ftp_server.py >> /dev/null 2>&1 &
-
 ```
 
 或使用screen命令放入后台运行(需要安装screen工具)：
 
-```
+```bash
 screen -dmS ftp
 screen -r ftp
 python ftp_server.py
@@ -60,7 +58,9 @@ Ctrl+A+D 			# 切回主screen即可
 
 Ctrl + C 即可取消server运行（直接运行，或screen方式放在后台运行）
 
-`ps -ef | grep `
+```bash
+ps -ef | grep python | grep ftp_server.py | grep -v grep | awk '{print $2}' | xargs -I{} kill {}
+```
 
 
 ## 功能说明

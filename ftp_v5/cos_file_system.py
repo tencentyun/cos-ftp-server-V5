@@ -97,6 +97,7 @@ class CosFileSystem(AbstractedFS):
             try:
                 url = self._cos_client.get_presigned_download_url(Bucket=self._bucket_name, Key=key_name)
                 fd = urllib.urlopen(url)
+                fd.closed = False
             except CosClientError as e:
                 logger.exception("open file:{0} occurs a CosClientError.".format(str(ftp_path).encode("utf-8")))
                 raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
