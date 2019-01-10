@@ -20,11 +20,6 @@ class MultipartUpload(object):
     def __init__(self, cos_client, dict_response):
         self._cos_client = cos_client
         for response_name, attr_name, default_value in MultipartUpload.ResponseDataParser:
-            if response_name == "Bucket":
-                bucket_appid = dict_response[response_name].split("-")
-                del bucket_appid[-1]
-                bucket = "-".join(bucket_appid)
-                dict_response[response_name] = bucket  # V5 返回回来的是bucket-appid这种格式
             setattr(self, attr_name, dict_response[response_name] or default_value)
 
         self._multipart_upload = dict()
