@@ -77,6 +77,9 @@ class CosFtpConfig:
                     user_info['delete_enable'] = True
 
                 home_dir = cfg.get(section, "home_dir")
+                if str(home_dir).endswith("/"):
+                    home_dir = str(home_dir)[:-1]
+
                 login_username = cfg.get(section, "ftp_login_user_name")
                 login_password = cfg.get(section, "ftp_login_user_password")
                 authority = cfg.get(section, "authority")
