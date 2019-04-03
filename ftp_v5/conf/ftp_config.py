@@ -15,7 +15,7 @@ from ftp_v5.multipart_upload import MultipartUpload
 logger = logging.getLogger(__name__)
 
 
-class CosFtpConfig:
+class CosFtpConfig(object):
     CONFIG_PATH = None
     if platform.system() == "Windows":
         CONFIG_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + \
@@ -227,6 +227,15 @@ class CosFtpConfig:
         检查配置参数是否正确
         :return:
         """
+        cfg = ConfigParser.RawConfigParser()
+        cfg.read(CosFtpConfig.CONFIG_PATH)
+
+        config_check_enable = True  # 默认开启配置检查
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "config_check_enable"):
+            config_check_enable = cfg.getboolean("OPTIONAL", "config_check_enable")
+
+        if not config_check_enable:
+            return  # 跳过配置检查
 
         if ftp_config.single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
             raise ValueError("Single file size can only support up to 40TB")
@@ -264,4 +273,5 @@ class CosFtpConfig:
 if __name__ == "__main__":
     print CosFtpConfig.CONFIG_PATH
 
-    print CosFtpConfig()
+    print dir(CosFtpConfig())
+    print dir(CosFtpConfig())

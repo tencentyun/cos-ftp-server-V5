@@ -14,6 +14,7 @@ Python解释器版本：Python 2.7
 
 - cos-python-sdk-v5 (>=1.6.5)
 - pyftpdlib (>=1.5.2)
+- psutil (>=5.6.1)
 
 
 ### 使用限制
@@ -143,6 +144,8 @@ passive_port = 60000,65535             # passive_port可以设置passive模式�
 single_file_max_size = 21474836480
 
 [OPTIONAL]
+config_check_enable = true
+
 # 以下设置，如无特殊需要，建议保留default设置  如需设置，请合理填写一个整数
 min_part_size       = default
 upload_thread_num   = default
@@ -162,8 +165,10 @@ log_dir             = log                  # 设置日志的存放目录，默�
 3. `endpoint`和`region`不会同时生效，使用公有云COS服务只需要正确填写`region`字段即可，`endpoint`常用于私有化部署环境中。当同时填写了`region`和`endpoint`，则会`endpoint`会优先生效。
 
 配置文件中的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
-同时，提供最大连接数的限制选项。 这里如果不想限制最大连接数，可以填写0，即表示不限制最大连接数目（不过需要根据您机器的性能合理评估）。
 
+这里提供最大连接数的限制选项：如果不想限制最大连接数，可以填写0，即表示不限制最大连接数目（不过需要根据您机器的性能合理评估）。由于每个ftp客户端和服务器之间会建立控制连接和数据连接，同时ftp server需要保留一个连接用于回复拒绝信息。因此，每个ftp server进程最大能够支持(max_connection_num - 1)/2个客户端同时连接。
+
+在最新版本的cos ftp server程序中提供了配置校验功能，程序会根据当前配置选项评估出运行所需的资源用量，并将其与当前系统可用资源进行对比。若当前系统的可用资源无法满足运行所需，则会拒绝启动cos ftp server进程。该功能可以尽力确保程序在启动后，始终处于资源可控的稳定运行状态。
 
 ## FAQ
 

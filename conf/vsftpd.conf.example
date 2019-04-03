@@ -6,10 +6,10 @@ cos_region = ap-xxx
 cos_protocol = https
 #cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user0
-ftp_login_user_name=user0
-ftp_login_user_password=pass0
-authority=RW
-delete_enable=true
+ftp_login_user_name = user0
+ftp_login_user_password = pass0
+authority = RW
+delete_enable = true
 
 [COS_ACCOUNT_1]
 cos_secretid = XXXX
@@ -36,6 +36,8 @@ passive_port = 60000,65535
 single_file_max_size = 214748364800
 
 [OPTIONAL]
+config_check_enable = true
+
 # 以下设置，如无特殊需要，建议保留default设置  如需设置，请合理填写一个整数
 min_part_size       = default
 upload_thread_num   = default
