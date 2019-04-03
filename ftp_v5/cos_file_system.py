@@ -121,6 +121,7 @@ class CosFileSystem(AbstractedFS):
             try:
                 response = self._cos_client.head_object(Bucket=self._bucket_name,
                                                         Key=key_name)
+                return int(response["Content-Length"])
             except CosClientError as e:
                 logger.exception("Get File:{0} size".format(str(key_name).encode("utf-8")))
                 raise FilesystemError(
@@ -133,7 +134,6 @@ class CosFileSystem(AbstractedFS):
                 logger.exception("Get File:{0} size".format(str(key_name).encode("utf-8")))
                 raise FilesystemError(
                     "Failed to retrieve the file {0} attribute information".format(str(key_name).encode("utf-8")))
-            return int(response["Content-Length"])
         elif self.isdir(path):
             return 0
         else:
@@ -215,8 +215,8 @@ class CosFileSystem(AbstractedFS):
             except CosClientError as e:
                 logger.exception("Rename " + str(src).encode("utf-8") + " to " + str(dest).encode("utf-8")
                                  + "occurs an CosClientError.")
-                raise FilesystemError("Rename {0} to {1} failed.".format(str(src).encode("utf-8")),
-                                      str(dest).encode("utf-8"))
+                raise FilesystemError(
+                    "Rename {0} to {1} failed.".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
             except CosServiceError as e:
                 logger.exception("Rename " + str(src).encode("utf-8") + "to" + str(dest).encode("utf-8")
                                  + "occurs an CosServiceError.")
@@ -363,7 +363,6 @@ class CosFileSystem(AbstractedFS):
             except CosException:
                 logger.error("Exception: {0}".format(str(CosException.message).encode("utf-8")))
                 raise FilesystemError(CosException.message)
-                return False
         else:
             return False
 
