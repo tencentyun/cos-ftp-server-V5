@@ -2,11 +2,23 @@
 
 import logging
 import threading
-from multiprocessing.pool import ThreadPool
 
 from ftp_v5.conf.ftp_config import CosFtpConfig
 
 logger = logging.getLogger(__name__)
+
+
+class UploadThread(threading.Thread):
+
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs=None, callback=None):
+        super(UploadThread, self).__init__(group=group, target=target, name=name, args=args, kwargs=kwargs)
+        self.__callback = callback
+
+    def run(self):
+        super(UploadThread, self).run()
+        if self.__callback is not None:
+            self.__callback()
 
 
 class UploadPool(object):
@@ -25,15 +37,13 @@ class UploadPool(object):
             return
 
         logger.info("init pool")
-        self._thread_pool = ThreadPool(CosFtpConfig().upload_thread_num)  # 固定线程池的大小
         self._thread_num = CosFtpConfig().upload_thread_num  # 线程数目
         self._semaphore = threading.Semaphore(CosFtpConfig().upload_thread_num)  # 控制线程数目
-        self._reference_threads = set()  # 引用计数
         UploadPool._isInit = True
 
     def apply_task(self, func, args=(), kwds={}):
         self._semaphore.acquire()
-        self._thread_pool.apply_async(func=func, args=args, kwds=kwds, callback=self.release)
+        UploadThread(target=func, args=args, kwargs=kwds, callback=self.release())
 
     def release(self, args):
         logger.info("Thread {0} release the semaphore.".format(threading.currentThread().getName()))
