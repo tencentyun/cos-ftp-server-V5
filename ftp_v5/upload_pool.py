@@ -43,8 +43,8 @@ class UploadPool(object):
 
     def apply_task(self, func, args=(), kwds={}):
         self._semaphore.acquire()
-        UploadThread(target=func, args=args, kwargs=kwds, callback=self.release())
+        UploadThread(target=func, args=args, kwargs=kwds, callback=self.release()).start()
 
-    def release(self, args):
+    def release(self):
         logger.info("Thread {0} release the semaphore.".format(threading.currentThread().getName()))
         self._semaphore.release()

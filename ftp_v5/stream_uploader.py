@@ -55,11 +55,6 @@ class StreamUploader(object):
         self._bucket_name = bucket_name
         self._key_name = object_name
 
-        if CosFtpConfig().single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
-            logger.error("Max file size: %d is too big. Thread: %s" % (
-                CosFtpConfig().single_file_max_size, threading.currentThread().getName()))
-            raise ValueError("Max file size: %d is too big" % CosFtpConfig().single_file_max_size)
-
         self._min_part_size = int(math.ceil(float(CosFtpConfig().single_file_max_size) / MultipartUpload.MaxiumPartNum))
 
         if self._min_part_size < StreamUploader.MIN_PART_SIZE:

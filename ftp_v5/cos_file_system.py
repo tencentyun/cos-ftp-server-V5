@@ -97,7 +97,9 @@ class CosFileSystem(AbstractedFS):
             try:
                 url = self._cos_client.get_presigned_download_url(Bucket=self._bucket_name, Key=key_name)
                 fd = urllib.urlopen(url)
+                fd.name = path.basename(filename)
                 fd.closed = False
+                return fd
             except CosClientError as e:
                 logger.exception("open file:{0} occurs a CosClientError.".format(str(ftp_path).encode("utf-8")))
                 raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
@@ -107,7 +109,6 @@ class CosFileSystem(AbstractedFS):
             except Exception as e:
                 logger.exception("open file:{0} occurs an error.".format(str(ftp_path).encode("utf-8")))
                 raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
-            return fd
         else:
             return MockCosWriteFile(self, self._bucket_name, key_name)
 
@@ -475,15 +476,3 @@ class CosFileSystem(AbstractedFS):
                 perm = 'r'
             line = "type=%s;size=%d;perm=%s;modify=%s %s\r\n" % (ft, size, perm, last_modified, name)
             yield line.encode("utf8", self.cmd_channel.unicode_errors)
-
-
-def test():
-    cos_client = CosS3Client(CosConfig(Appid=CosFtpConfig().appid,
-                                       Access_id=CosFtpConfig().secretid,
-                                       Access_key=CosFtpConfig().secretkey,
-                                       Region=CosFtpConfig().region
-                                       ))
-
-
-if __name__ == "__main__":
-    test()

@@ -52,6 +52,9 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
 
 
 def main():
+    # 首先校验配置的合理性
+    CosFtpConfig.check_config(CosFtpConfig())
+
     port = CosFtpConfig().listen_port
 
     external_ip = CosFtpConfig().masquerade_address

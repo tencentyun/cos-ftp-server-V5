@@ -2,11 +2,15 @@
 
 import ConfigParser
 import logging
+import math
 import os
 import platform
+import threading
 from multiprocessing import cpu_count
 
 import ftp_v5.conf.common_config
+from ftp_v5 import system_info
+from ftp_v5.multipart_upload import MultipartUpload
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,20 @@ class CosFtpConfig:
 
         return True
 
+    _instance = None
+    _isInit = False
+    _lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super(CosFtpConfig, cls).__new__(cls)
+            return cls._instance
+
     def __init__(self):
+        if CosFtpConfig._isInit:
+            return
+
         cfg = ConfigParser.RawConfigParser()
         cfg.read(CosFtpConfig.CONFIG_PATH)
 
@@ -171,6 +188,8 @@ class CosFtpConfig:
         else:
             self.log_filename = self.log_dir + "/" + self.log_filename
 
+        CosFtpConfig._isInit = True
+
     def get_user_info(self, homedir):
         '''
         每个用户一个工作目录
@@ -201,6 +220,44 @@ class CosFtpConfig:
                    self.passive_ports,
                    self.single_file_max_size, self.min_part_size, self.upload_thread_num, self.max_connection_num,
                    self.max_list_file, self.log_level, self.log_dir, self.log_filename)
+
+    @classmethod
+    def check_config(cls, ftp_config):
+        """
+        检查配置参数是否正确
+        :return:
+        """
+
+        if ftp_config.single_file_max_size > 40 * 1000 * ftp_v5.conf.common_config.GIGABYTE:
+            raise ValueError("Single file size can only support up to 40TB")
+
+        # 先获取当前系统的物理内存
+        part_size = ftp_config.min_part_size
+        if part_size < int(math.ceil(float(ftp_config.single_file_max_size) / MultipartUpload.MaxiumPartNum)):
+            part_size = int(math.ceil(float(ftp_config.single_file_max_size) / MultipartUpload.MaxiumPartNum))
+
+        if ftp_config.max_connection_num < 0:
+            raise ValueError("max connection num must be greater or equal to 0")
+
+        sys_available_memory = system_info.get_available_memory()
+
+        # ftp进程的最大使用内存大约为：
+        # 1. 每个控制连接大概会耗费1 -- 3MB内存
+        # 2. 每个连接的list操作大约会耗费max_list_file KB
+        # 3. 每个上传线程需要读取一个part_size的缓冲区，另外在上传到COS过程中，客户端又会向ftp服务端写入
+        # 4. ftp server主线程大约耗费20MB
+        each_connection_memory = (ftp_config.max_connection_num - 1) * 3 * ftp_v5.conf.common_config.MEGABYTE
+        each_connection_list_memory = \
+            ((ftp_config.max_connection_num - 1) / 2) * ftp_config.max_list_file * ftp_v5.conf.common_config.KILOBYTE
+        upload_buffer_memory = (((ftp_config.max_connection_num - 1) / 2) + ftp_config.upload_thread_num) * part_size
+        ftp_process_res = 20 * ftp_v5.conf.common_config.MEGABYTE
+
+        require_memory = ftp_process_res + each_connection_memory + each_connection_list_memory + upload_buffer_memory
+
+        if sys_available_memory * 0.6 < require_memory:
+            raise ValueError("Insufficient current available memory:{0}. Require memory size:{1}. "
+                             "please consider to decrease the max connection num or release some system memory."
+                             .format(sys_available_memory, require_memory))
 
 
 # unittest
