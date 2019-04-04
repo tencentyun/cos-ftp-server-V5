@@ -54,6 +54,7 @@ class MockCosWriteFile(object):
             raise FilesystemError("Upload failed. File:{0}".format(self._key_name))
         finally:
             logger.debug("Upload finish. File:{0}".format(self._key_name))
+            self._uploader.clean()
             self._closed = True
 
     @property
