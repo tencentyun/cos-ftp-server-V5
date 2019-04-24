@@ -77,7 +77,7 @@ class CosFtpConfig(object):
 
                 user_info['cos_protocol'] = "https"
 
-                if cfg.has_option(section, 'protocol'):
+                if cfg.has_option(section, 'cos_protocol'):
                     user_info['cos_protocol'] = cfg.get(section, 'cos_protocol')
 
                 user_info['cos_region'] = str()
