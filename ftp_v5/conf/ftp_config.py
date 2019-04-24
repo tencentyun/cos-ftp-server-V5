@@ -255,7 +255,7 @@ class CosFtpConfig(object):
         # 2. 每个连接的list操作大约会耗费max_list_file KB
         # 3. 每个上传线程需要读取一个part_size的缓冲区，另外在上传到COS过程中，客户端又会向ftp服务端写入
         # 4. ftp server主线程大约耗费20MB
-        each_connection_memory = (ftp_config.max_connection_num - 1) * 3 * ftp_v5.conf.common_config.MEGABYTE
+        each_connection_memory = (ftp_config.max_connection_num - 1) * 2 * ftp_v5.conf.common_config.MEGABYTE
         each_connection_list_memory = \
             ((ftp_config.max_connection_num - 1) / 2) * ftp_config.max_list_file * ftp_v5.conf.common_config.KILOBYTE
         upload_buffer_memory = (((ftp_config.max_connection_num - 1) / 2) + ftp_config.upload_thread_num) * part_size
@@ -264,14 +264,19 @@ class CosFtpConfig(object):
         require_memory = ftp_process_res + each_connection_memory + each_connection_list_memory + upload_buffer_memory
 
         if sys_available_memory * 0.6 < require_memory:
-            raise ValueError("Insufficient current available memory:{0}. Require memory size:{1}. "
-                             "please consider to decrease the max connection num or release some system memory."
-                             .format(sys_available_memory, require_memory))
+            raise ValueError("60% of the currently available memory is:{0}, and "
+                             "cos ftp server requires a maximum of memory:{1}. "
+                             "Please consider to decrease the max connection num or release some system memory."
+                             "You can also disable the config check by setting 'config_check_enable' to false"
+                             .format(sys_available_memory * 0.6, require_memory))
 
 
 # unittest
 if __name__ == "__main__":
-    print CosFtpConfig.CONFIG_PATH
+    print
+    CosFtpConfig.CONFIG_PATH
 
-    print dir(CosFtpConfig())
-    print dir(CosFtpConfig())
+    print
+    dir(CosFtpConfig())
+    print
+    dir(CosFtpConfig())

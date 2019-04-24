@@ -132,6 +132,11 @@ class StreamUploader(object):
             if not is_finish:
                 time.sleep(10 / 1000)  # 休眠10毫秒
 
+    def clean(self):
+        if self._buffer is not None:
+            self._buffer.close()
+            self._buffer = None
+
     def close(self):
         logger.info(
             "Closing the stream upload... File: {}, Thread: {}".format(self._key_name, threading.currentThread()))
@@ -153,7 +158,7 @@ class StreamUploader(object):
             self._multipart_uploader.complete_upload()
 
         self._uploaded_len = 0
-        self._buffer.close()
+        self.clean()
 
 
 if __name__ == "__main__":
