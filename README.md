@@ -110,7 +110,7 @@ conf/vsftpd.conf.example为Ftp Server工具的配置文件示例，请copy为vsf
 [COS_ACCOUNT_0]
 cos_secretid = XXXXXX
 cos_secretkey = XXXXXX
-cos_bucket = {bucket name}-123
+cos_bucket = bucketname1-123456789
 cos_region = ap-xxx
 cos_protocol = https                    # 连接COS或者自定义endpoint所使用的协议类型，默认为https
 #cos_endpoint = ap-xxx.myqcloud.com
@@ -123,7 +123,7 @@ delete_enable=true					# true为允许该ftp用户进行删除操作(默认)，f
 [COS_ACCOUNT_1]
 cos_secretid = XXXX
 cos_secretkey = XXXXX
-cos_bucket = {bucket name}-123
+cos_bucket = bucketname2-123456789
 cos_region = ap-xxx
 cos_protocol = https
 #cos_endpoint = ap-xxx.myqcloud.com
