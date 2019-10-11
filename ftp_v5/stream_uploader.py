@@ -4,7 +4,12 @@ import logging
 import math
 import threading
 import time
-from cStringIO import StringIO
+try:
+   # for python 2
+   from cStringIO import StringIO
+except ImportError:
+   # for python 3
+   from io import BytesIO as StringIO
 
 import ftp_v5.conf.common_config
 from ftp_v5.conf.ftp_config import CosFtpConfig

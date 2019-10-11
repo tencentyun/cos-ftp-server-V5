@@ -43,7 +43,7 @@ def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):
     server = FTPServer(("0.0.0.0", port), handler)
     server.max_cons = CosFtpConfig().max_connection_num
 
-    print "starting  ftp server..."
+    print("starting  ftp server...")
 
     try:
         server.serve_forever()

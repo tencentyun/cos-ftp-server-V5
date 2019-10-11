@@ -1,11 +1,17 @@
 # -*- coding:utf-8 -*-
 
-import ConfigParser
 import logging
 import math
 import os
 import platform
 import threading
+try:
+   # for python 2
+   import ConfigParser
+except ImportError:
+   # for python 3
+   import configparser as ConfigParser
+
 from multiprocessing import cpu_count
 
 import ftp_v5.conf.common_config
