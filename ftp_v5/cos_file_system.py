@@ -121,7 +121,7 @@ class CosFileSystem(AbstractedFS):
     def open(self, filename, mode):
         logger.info("user invoke open to {0}".format(str(filename).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(filename, six.string_types), filename
+        assert isinstance(filename, six.text_type), filename
         if self.isdir(filename):
             raise FilesystemError(filename + "is a directory")
 
@@ -155,7 +155,7 @@ class CosFileSystem(AbstractedFS):
     def getsize(self, path):
         logger.info("User invoke getsize to {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(path).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if self.isfile(path):
             key_name = self.fs2ftp(path).strip("/")
             try:
@@ -183,7 +183,7 @@ class CosFileSystem(AbstractedFS):
     def chdir(self, path):
         logger.info("user invoke chdir to {0}".format(str(path).encode("utf-8")))
         logger.info("current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if self.isdir(path):
             self._cwd = self.fs2ftp(path)
             logger.debug("current work directory {0}".format(str(self.cwd).encode("utf-8")))
@@ -197,7 +197,7 @@ class CosFileSystem(AbstractedFS):
     def mkdir(self, path):
         logger.info("user invoke mkdir of {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory: {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if self.isdir(path):
             logger.error(path + " is a directory")
             raise FilesystemError(path + " is a directory")
@@ -225,8 +225,8 @@ class CosFileSystem(AbstractedFS):
     def rename(self, src, dest):
         logger.info("User invoke rename for {0} to {1}".format(str(src).encode("utf-8"), str(dest).encode("utf-8")))
         logger.info("Current work directory: {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(src, six.string_types), src
-        assert isinstance(dest, six.string_types), dest
+        assert isinstance(src, six.text_type), src
+        assert isinstance(dest, six.text_type), dest
         if src == dest:
             return
 
@@ -312,7 +312,7 @@ class CosFileSystem(AbstractedFS):
     def listdir(self, path):
         logger.info("user invoke listdir for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         ftp_path = self.fs2ftp(path)
         logger.debug("ftp_path: {0}".format(str(ftp_path).encode("utf-8")))
         dir_name = ftp_path
@@ -382,7 +382,7 @@ class CosFileSystem(AbstractedFS):
     def isfile(self, path):
         logger.info("user invoke isfile for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if path.startswith("/"):
             ftp_path = self.fs2ftp(path)
             key_name = ftp_path.strip("/")
@@ -407,7 +407,7 @@ class CosFileSystem(AbstractedFS):
     def isdir(self, path):  # xxx
         logger.info("User invoke isdir for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(path).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if path.startswith("/"):
             ftp_path = self.fs2ftp(path)
             if ftp_path == "/":  # 根目录
@@ -438,7 +438,7 @@ class CosFileSystem(AbstractedFS):
     def rmdir(self, path):
         logger.info("user invoke rmdir for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if not CosFtpConfig().get_user_info(self.root)['delete_enable']:
             raise FilesystemError("Current user is not allowed to delete.")
 
@@ -451,7 +451,7 @@ class CosFileSystem(AbstractedFS):
     def remove(self, path):
         logger.info("user invoke remove for {0}".format(str(path).encode("utf-8")))
         logger.info("Current work directory {0}".format(str(self.cwd).encode("utf-8")))
-        assert isinstance(path, six.string_types), path
+        assert isinstance(path, six.text_type), path
         if not CosFtpConfig().get_user_info(self.root)['delete_enable']:
             raise FilesystemError("Current user is not allowed to delete.")
 
