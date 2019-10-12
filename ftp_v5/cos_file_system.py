@@ -67,10 +67,10 @@ class MockCosReadFile(object):
         self._url_fd = url_fd
         self._bucket_name = bucket_name
         self._key_name = filename
-        self._closed = False
         self._file_name = path.basename(filename)
         self._name = path.basename(filename)
         self._tell = 0
+        self._closed = False
 
     @property
     def name(self):
