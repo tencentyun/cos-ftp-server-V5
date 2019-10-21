@@ -83,7 +83,6 @@ class MockCosReadFile(object):
         if read_len is None:
             contents = self._url_fd.read()
             self._tell = len(contents)
-            logger.info("read all file: {0}".format(self._tell))
         else:
             contents = self._url_fd.read(read_len)
             self._tell += len(contents)
