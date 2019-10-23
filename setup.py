@@ -9,7 +9,7 @@ def requirements():
         return requirements
 
 
-print find_packages()
+print(find_packages())
 
 setup(
     name='cos-ftp-server-v5',
