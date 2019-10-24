@@ -106,12 +106,13 @@ class MockCosReadFile(object):
                 self._tell = len(self._url_fd.read(lens + offset))
 
     def read(self, read_len=None):
+        contents = None
         if read_len is None:
             contents = self._url_fd.read()
-            self._tell = len(contents)
         elif read_len >= 0:
             contents = self._url_fd.read(read_len)
-            self._tell += len(contents)
+        if contents is not None:
+            self._tell += len(contens)
         return contents
 
     def close(self):
