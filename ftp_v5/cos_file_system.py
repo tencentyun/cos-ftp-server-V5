@@ -62,8 +62,9 @@ class MockCosWriteFile(object):
         return self._closed
 
 class MockCosReadFile(object):
-    def __init__(self, file_system, url_fd, bucket_name, filename):
+    def __init__(self, file_system, url, url_fd, bucket_name, filename):
         self._file_system = file_system
+        self._url = url
         self._url_fd = url_fd
         self._bucket_name = bucket_name
         self._key_name = filename
@@ -79,11 +80,36 @@ class MockCosReadFile(object):
     def tell(self):
         return self._tell
 
+    def seek(self, offset, whence=0):
+        if whence is 0 and offset >= 0:
+            self._url_fd.close()
+            self._url_fd = six.moves.urllib.request.urlopen(self._url)
+            if int(self._url_fd.getcode()) / 100 != 2:
+                raise FilesystemError("Failed to open file {0} in read mode. response code: {1}".format(
+                    str(self._file_system.fs2ftp(self._key_name)).encode("utf-8"),
+                    str(self._url_fd.getcode()).encode("utf-8")
+                ))
+            self._tell = len(self._url_fd.read(offset))
+        elif whence is 1 and offset >= 0:
+            self._tell += len(self._url_fd.read(offset))
+        elif whence is 2:
+            self._tell += len(self._url_fd.read())
+            lens = self._tell
+            if offset < 0 and lens + offset >= 0:
+                self._url_fd.close()
+                self._url_fd = six.moves.urllib.request.urlopen(self._url)
+                if int(self._url_fd.getcode()) / 100 != 2:
+                    raise FilesystemError("Failed to open file {0} in read mode. response code: {1}".format(
+                        str(self._file_system.fs2ftp(self._key_name)).encode("utf-8"),
+                        str(self._url_fd.getcode()).encode("utf-8")
+                ))
+                self._tell = len(self._url_fd.read(lens + offset))
+
     def read(self, read_len=None):
         if read_len is None:
             contents = self._url_fd.read()
             self._tell = len(contents)
-        else:
+        elif read_len >= 0:
             contents = self._url_fd.read(read_len)
             self._tell += len(contents)
         return contents
@@ -138,7 +164,7 @@ class CosFileSystem(AbstractedFS):
                         str(ftp_path).encode("utf-8"),
                         str(fd.getcode()).encode("utf-8")
                     ))
-                return MockCosReadFile(self, fd, self._bucket_name, filename)
+                return MockCosReadFile(self, url, fd, self._bucket_name, filename)
             except CosClientError as e:
                 logger.exception("open file:{0} occurs a CosClientError.".format(str(ftp_path).encode("utf-8")))
                 raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
