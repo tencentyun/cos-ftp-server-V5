@@ -62,7 +62,7 @@ class MockCosWriteFile(object):
         return self._closed
 
 class MockCosReadFile(object):
-    def __init__(self, file_system, url, url_fd, bucket_name, filename, length):
+    def __init__(self, file_system, url, url_fd, bucket_name, filename):
         self._file_system = file_system
         self._url = url
         self._url_fd = url_fd
@@ -70,7 +70,6 @@ class MockCosReadFile(object):
         self._key_name = filename
         self._name = path.basename(filename)
         self._tell = 0
-        self._length = length
         self._closed = False
 
     def open(self):
@@ -96,34 +95,19 @@ class MockCosReadFile(object):
         self.assert_file_close()
 
         if whence is 0 and offset >= 0:
-            if offset > self._tell:
-                if offset >= self._length:
-                    self._url_fd.read()
-                    self._tell = self.length
-                else:
-                    self._url_fd.read(offset-self._tell)
-                    self._tell = offset
-            elif offset < self._tell:
-                self.close()
-                self.open()
-                self._url_fd.read(offset)
-                self._tell = offset
+            self.close()
+            self.open()
+            self._tell = len(self._url_fd.read(offset))
 
         elif whence is 1 and offset >= 0:
-            if offset+self._tell >= self._length:
-                self._url_fd.read()
-                self._tell = self.length
-            else:
-                self._url_fd.read(offset)
-                self._tell += offset
+            self._tell += len(self._url_fd.read(offset))
 
         elif whence is 2:
-            self._tell = self._length
-            self._url_fd.read()
-            if offset < 0 and self._length + offset >= 0:
+            self._tell += len(self._url_fd.read())
+            if offset < 0 and self._tell + offset >= 0:
                 self.close()
                 self.open()
-                self._tell = self._length + offset
+                self._tell = self._tell + offset
                 self._url_fd.read(self._tell)
 
     def read(self, read_len=None):
@@ -131,7 +115,7 @@ class MockCosReadFile(object):
         contents = None
         if read_len is None:
             contents = self._url_fd.read()
-            self._tell = self._length
+            self._tell = self._file_system.getsize(self._key_name)
         elif read_len >= 0:
             contents = self._url_fd.read(read_len)
             lens = len(contents)
@@ -139,6 +123,7 @@ class MockCosReadFile(object):
                 logger.info("the readsize is {0} and filesize is {1}".format(str(lens), str(read_len)))
                 raise FilesystemError("read file encountered error!")
             self._tell += lens
+            logger.info("the read file string with length : {0}". format(lens))
         if contents is not None:
             return contents
 
@@ -197,7 +182,7 @@ class CosFileSystem(AbstractedFS):
                         str(ftp_path).encode("utf-8"),
                         str(fd.getcode()).encode("utf-8")
                     ))
-                return MockCosReadFile(self, url, fd, self._bucket_name, filename, self.getsize(filename))
+                return MockCosReadFile(self, url, fd, self._bucket_name, filename)
             except CosClientError as e:
                 logger.exception("open file:{0} occurs a CosClientError.".format(str(ftp_path).encode("utf-8")))
                 raise FilesystemError("Failed to open file {0} in read mode".format(str(ftp_path).encode("utf-8")))
