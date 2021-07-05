@@ -247,21 +247,21 @@ class CosFileSystem(AbstractedFS):
 
         if "CommonPrefixes" in response and isinstance(response["CommonPrefixes"], dict):
             dir_path = "/" + response["CommonPrefixes"]["Prefix"]
-            dir_name = dir_path[len(self.cwd):].strip("/")
+            dir_name = dir_path[len(self.cwd.encode('utf8')):].strip("/")
             if dir_name != "":
                 list_dir.add(("dir", 0, None, dir_name))
 
         if "CommonPrefixes" in response and isinstance(response["CommonPrefixes"], list):
             for common_prefix in response["CommonPrefixes"]:
                 dir_path = "/" + common_prefix["Prefix"]
-                dir_name = dir_path[len(self.cwd):].strip("/")
+                dir_name = dir_path[len(self.cwd.encode('utf8')):].strip("/")
                 if dir_name != "":
                     list_dir.add(("dir", 0, None, dir_name))
 
         if "Contents" in response and len(response["Contents"]) > 0:
             for key in response["Contents"]:
                 key_path = "/" + key["Key"]
-                key_name = key_path[len(self.cwd):].strip("/")
+                key_name = key_path[len(self.cwd.encode('utf8')):].strip("/")
 
                 if key_name == "":
                     continue
