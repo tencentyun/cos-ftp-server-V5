@@ -10,9 +10,6 @@ from multiprocessing import cpu_count
 
 import ftp_v5.conf.common_config
 from ftp_v5 import system_info
-from ftp_v5.multipart_upload import MultipartUpload
-
-logger = logging.getLogger(__name__)
 
 
 class CosFtpConfig(object):
@@ -188,6 +185,53 @@ class CosFtpConfig(object):
         else:
             self.log_filename = self.log_dir + "/" + self.log_filename
 
+        self.log_rotate_enabled = False
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_rotate_enabled"):
+            try:
+                if str(cfg.get("OPTIONAL", "log_rotate_enabled")).lower() == str('yes') or\
+                    str(cfg.get("OPTIONAL", "log_rotate_enabled")).lower() == str('true') or\
+                    str(cfg.get("OPTIONAL", "log_rotate_enabled")).lower() == str('y'):
+                    self.log_rotate_enabled = True
+                else:
+                    self.log_rotate_enabled = False
+            except ValueError:
+                pass
+            except TypeError:
+                pass
+
+        # Y-%m-%d_%H-%M-%S
+        self.log_rotate_when = 'H'
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_rotate_when"):
+            try:
+                # 秒级滚动，大小写兼容
+                if str(cfg.get("OPTIONAL", "log_rotate_when")).lower() == str('s'):
+                    self.log_rotate_when = 'S'
+                # 分钟级
+                elif str(cfg.get("OPTIONAL", "log_rotate_when")) == str('M'):
+                    self.log_rotate_when = 'M'
+                # 小时级，大小写兼容
+                elif str(cfg.get("OPTIONAL", "log_rotate_when")).lower == str('H').lower:
+                    self.log_rotate_when = 'H'
+                # 最多到天级
+                elif str(cfg.get("OPTIONAL", "log_rotate_when")).lower() == str('d').lower():
+                    self.log_rotate_when = 'd'
+                else:
+                    self.log_rotate_when = 'H'
+            except ValueError:
+                pass
+            except TypeError:
+                pass
+
+        self.log_backup_count = 100
+        if cfg.has_section("OPTIONAL") and cfg.has_option("OPTIONAL", "log_backup_count"):
+            try:
+                if int(cfg.get("OPTIONAL", "log_backup_count")) > 0:
+                    self.log_rotate_size = int(cfg.get("OPTIONAL", "log_backup_count"))
+            except ValueError:
+                pass
+            except TypeError:
+                pass
+
         CosFtpConfig._isInit = True
 
     def get_user_info(self, homedir):
@@ -242,8 +286,9 @@ class CosFtpConfig(object):
 
         # 先获取当前系统的物理内存
         part_size = ftp_config.min_part_size
-        if part_size < int(math.ceil(float(ftp_config.single_file_max_size) / MultipartUpload.MaxiumPartNum)):
-            part_size = int(math.ceil(float(ftp_config.single_file_max_size) / MultipartUpload.MaxiumPartNum))
+        MaxiumPartNum = 10000
+        if part_size < int(math.ceil(float(ftp_config.single_file_max_size) / MaxiumPartNum)):
+            part_size = int(math.ceil(float(ftp_config.single_file_max_size) / MaxiumPartNum))
 
         if ftp_config.max_connection_num < 0:
             raise ValueError("max connection num must be greater or equal to 0")

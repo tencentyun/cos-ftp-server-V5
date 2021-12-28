@@ -1,22 +1,12 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-import logging
-
 from pyftpdlib.servers import FTPServer
 
 from ftp_v5.conf.ftp_config import CosFtpConfig
 from ftp_v5.cos_authorizer import CosAuthorizer
 from ftp_v5.cos_file_system import CosFileSystem
 from ftp_v5.cos_ftp_handler import CosFtpHandler
-
-logging.basicConfig(
-    level=CosFtpConfig().log_level,
-    format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-    datefmt='%a, %d %b %Y %H:%M:%S',
-    filename=CosFtpConfig().log_filename,
-    filemode='w'
-)
 
 
 def run(port=2121, passive_ports=range(60000, 65535), masquerade_address=None):

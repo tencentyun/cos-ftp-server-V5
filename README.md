@@ -113,12 +113,12 @@ cos_secretkey = XXXXXX
 cos_bucket = bucketname1-123456789
 cos_region = ap-xxx
 cos_protocol = https                    # 连接COS或者自定义endpoint所使用的协议类型，默认为https
-#cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user0
 ftp_login_user_name=user0
 ftp_login_user_password=pass0
 authority=RW
 delete_enable=true					# true为允许该ftp用户进行删除操作(默认)，false为禁止该用户进行删除操作
+#cos_endpoint = cos.ap-xxx.tencentcos.cn # 设置访问域名，内网访问不需要设置 endpoint，外网访问需要设置成 cos.ap-xxx.tencentcos.cn 外网域名(注意替换xxx为存储桶所在region)
 
 [COS_ACCOUNT_1]
 cos_secretid = XXXX
@@ -126,12 +126,12 @@ cos_secretkey = XXXXX
 cos_bucket = bucketname2-123456789
 cos_region = ap-xxx
 cos_protocol = https
-#cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user1
 ftp_login_user_name=user1
 ftp_login_user_password=pass1
 authority=RW
 delete_enable=false
+#cos_endpoint = cos.ap-xxx.tencentcos.cn
 
 [NETWORK]
 masquerade_address = XXX.XXX.XXX.XXX        # 如果FTP SERVER处于某个网关或NAT后，可以通过该配置项将网关的IP地址或域名指定给FTP
@@ -162,7 +162,7 @@ log_dir             = log                  # 设置日志的存放目录，默�
 
 1. 每个ACCOUNT下的用户名（`ftp_login_user_name`）和用户的主目录（`home_dir`）必须各不相同，并且主目录必须是系统中真实存在的目录；
 2. 每个COS FTP SERVER允许同时登录的用户数目不能超过100；
-3. `endpoint`和`region`不会同时生效，使用公有云COS服务只需要正确填写`region`字段即可，`endpoint`常用于私有化部署环境中。当同时填写了`region`和`endpoint`，则会`endpoint`会优先生效。
+3. `endpoint`和`region`不会同时生效，在腾讯云内网使用公有云COS服务只需要正确填写`region`字段即可，`endpoint`常用于外网访问和私有化部署环境中。当同时填写了`region`和`endpoint`，则会`endpoint`会优先生效。
 
 配置文件中的OPTIONAL选项是提供给高级用户用于调整上传性能的可选项，根据机器的性能合理地调整上传分片的大小和并发上传的线程数，可以获得更好的上传速度，一般用户不需要调整，保持默认值即可。
 
@@ -171,6 +171,10 @@ log_dir             = log                  # 设置日志的存放目录，默�
 在最新版本的cos ftp server程序中提供了配置校验功能，程序会根据当前配置选项评估出运行所需的资源用量，并将其与当前系统可用资源进行对比。若当前系统的可用资源无法满足运行所需，则会拒绝启动cos ftp server进程。该功能可以尽力确保程序在启动后，始终处于资源可控的稳定运行状态。
 
 ## FAQ
+**填写region后连接不通，怎么配置endpoint**
+
+答：从 2.2.0 版本后，Ftp Server 默认使用内网域名访问 COS，当 Ftp Server 部署在腾讯云 CVM 等内网环境时，只需要设置存储桶所在 region，即可通过内网访问 COS。
+当 Ftp Server 部署在外网环境时，需要手动设置`endpoint`字段为`cos.ap-xxx.tecentcos.cn`(其中`ap-xxx`需要替换为具体region)，才能通过外网域名访问 COS
 
 **配置文件中的masquerade_address这个选项有何作用？何时需要配置masquerade_address**
 

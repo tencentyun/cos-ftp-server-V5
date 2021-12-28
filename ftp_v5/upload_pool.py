@@ -2,10 +2,11 @@
 
 import logging
 import threading
+from ftp_v5 import utils
 
 from ftp_v5.conf.ftp_config import CosFtpConfig
 
-logger = logging.getLogger(__name__)
+logger = utils.get_ftp_logger(__name__)
 
 
 class UploadThread(threading.Thread):

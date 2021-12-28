@@ -2,10 +2,11 @@
 
 import logging
 import threading
+from ftp_v5 import utils
 
 from qcloud_cos.cos_exception import CosException
 
-logger = logging.getLogger(__name__)
+logger = utils.get_ftp_logger(__name__)
 
 
 class MultipartUpload(object):

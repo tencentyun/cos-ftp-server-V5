@@ -4,6 +4,7 @@ import logging
 import math
 import threading
 import time
+from ftp_v5 import utils
 from cStringIO import StringIO
 
 import ftp_v5.conf.common_config
@@ -11,7 +12,7 @@ from ftp_v5.conf.ftp_config import CosFtpConfig
 from ftp_v5.multipart_upload import MultipartUpload
 from ftp_v5.upload_pool import UploadPool
 
-logger = logging.getLogger(__name__)
+logger = utils.get_ftp_logger(__name__)
 
 
 class FifoBuffer(object):

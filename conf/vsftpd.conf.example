@@ -4,12 +4,12 @@ cos_secretkey = XXXXXX
 cos_bucket = {bucket name}-123
 cos_region = ap-xxx
 cos_protocol = https
-#cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user0
 ftp_login_user_name = user0
 ftp_login_user_password = pass0
 authority = RW
 delete_enable = true
+#cos_endpoint = cos.ap-xxx.tencentcos.cn # 设置访问域名，内网访问不需要设置 endpoint，外网访问需要设置成 cos.ap-xxx.tencentcos.cn 形式的外网域名(注意替换xxx为存储桶所在region)
 
 [COS_ACCOUNT_1]
 cos_secretid = XXXX
@@ -17,12 +17,12 @@ cos_secretkey = XXXXX
 cos_bucket = {bucket name}-123
 cos_region = ap-xxx
 cos_protocol = https
-#cos_endpoint = ap-xxx.myqcloud.com
 home_dir = /home/user1
 ftp_login_user_name=user1
 ftp_login_user_password=pass1
 authority=RW
 delete_enable=true
+#cos_endpoint = cos.ap-xxx.tencentcos.cn # 设置访问域名，内网访问不需要设置 endpoint，外网访问需要设置成 cos.ap-xxx.tencentcos.cn 外网域名(注意替换xxx为存储桶所在region)
 
 [NETWORK]
 masquerade_address = XXX.XXX.XXX.XXX
@@ -37,11 +37,17 @@ single_file_max_size = 214748364800
 
 [OPTIONAL]
 config_check_enable = true
+# 开启日志滚动
+# log_rotate_enabled = true
+# 设置滚动粒度为分钟
+# log_rotate_when = M
+# 设置保留的日志数量
+# log_backup_count = 100
 
 # 以下设置，如无特殊需要，建议保留default设置  如需设置，请合理填写一个整数
 min_part_size       = default
 upload_thread_num   = default
-max_connection_num  = 100
+max_connection_num  = 1000
 max_list_file       = 10000
 log_level           = DEBUG
 log_dir             = log

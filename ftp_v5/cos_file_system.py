@@ -12,11 +12,13 @@ from qcloud_cos.cos_exception import CosException
 from qcloud_cos.cos_exception import CosServiceError
 
 from ftp_v5 import version
+from ftp_v5 import utils
 from ftp_v5.conf.ftp_config import CosFtpConfig
 from ftp_v5.stream_uploader import StreamUploader
+from ftp_v5.stream_downloader import StreamDownloader
 from ftp_v5.utils import reformat_lm
 
-logger = logging.getLogger(__name__)
+logger = utils.get_ftp_logger(__name__)
 
 
 class MockCosWriteFile(object):
@@ -96,6 +98,7 @@ class CosFileSystem(AbstractedFS):
 
         if 'r' in mode:
             try:
+                '''
                 url = self._cos_client.get_presigned_download_url(Bucket=self._bucket_name, Key=key_name)
                 fd = urllib.urlopen(url)
                 if int(fd.getcode()) / 100 != 2:
@@ -103,6 +106,9 @@ class CosFileSystem(AbstractedFS):
                         str(ftp_path).encode("utf-8"),
                         str(fd.getcode()).encode("utf-8")
                     ))
+                '''
+                # 支持断点续传，不再返回 urlopen 对象，在 StreamDownloader 中实现 seek
+                fd = StreamDownloader(self._cos_client, bucket_name=self._bucket_name, object_name=key_name)
                 fd.name = path.basename(filename)
                 fd.closed = False
                 return fd
