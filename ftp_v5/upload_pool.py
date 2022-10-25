@@ -15,7 +15,12 @@ class UploadThread(threading.Thread):
         self.__callback = callback
 
     def run(self):
-        super(UploadThread, self).run()
+        try:
+            super(UploadThread, self).run()
+        except Exception as e:
+            logger.info("Thread {0} throw exception \"{1}\"".format(threading.currentThread().getName(), e))
+            self.__callback()
+            raise e
         self.__callback()
 
 
